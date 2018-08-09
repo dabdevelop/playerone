@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "eosjs-ecc": "^4.0.2"
+  }
+}
