@@ -38,7 +38,7 @@ public:
         {
             game_itr = _games.emplace(_self, [&](auto &new_game){
                 new_game.gameid = _self;
-                new_game.max_supply = _L * _MAX_SUPPLY_TIMES;
+                new_game.max_supply = asset(_L * _MAX_SUPPLY_TIMES, GAME_SYMBOL);
             });
         }
 
@@ -81,8 +81,6 @@ public:
         eosio_assert(quantity.symbol == CORE_SYMBOL, "unexpected asset symbol input");
         eosio_assert(quantity.amount >= 0.01 && quantity.amount <= 100, "quantity must in range 0.01 - 100");
 
-        auto game_itr = _games.find(_self);
-
         asset exchange_unit = asset(1, CORE_SYMBOL);
         int64_t times = (quantity / exchange_unit) + 1;
 
@@ -93,6 +91,7 @@ public:
         asset remain_eos = quantity;
         asset transfer_token_amount = asset(0, GAME_SYMBOL);
         asset issue_token_amount = asset(0, GAME_SYMBOL);
+
         game_index _games(_self, _self);
         auto game_itr = _games.find(_self);
 
@@ -198,13 +197,13 @@ public:
         }
 
         auto eos_token = eosio::token(TOKEN_CONTRACT);
-        asset eos_balance = eos_token.get_balance(_self, symbol_type(CORE_SYMBOL).name());
-        asset token_supply = eos_token.get_supply(symbol_type(GAME_SYMBOL).name());
-        asset token_balance = eos_token.get_balance(_self, symbol_type(GAME_SYMBOL).name());
-        eosio_assert(eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
-        eosio_assert(token_supply == game_itr->supply, "token supply leaks");
-        eosio_assert(token_balance == game_itr->balance, "token balance leaks");
-        eosio_assert(token_supply - token_balance == game_itr->circulation && game_itr->circulation >= asset(0, GAME_SYMBOL), "circulation leaks");
+        asset real_eos_balance = eos_token.get_balance(_self, symbol_type(CORE_SYMBOL).name());
+        asset real_token_supply = eos_token.get_supply(symbol_type(GAME_SYMBOL).name());
+        asset real_token_balance = eos_token.get_balance(_self, symbol_type(GAME_SYMBOL).name());
+        eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
+        eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
+        eosio_assert(real_token_balance == game_itr->balance, "token balance leaks");
+        eosio_assert(real_token_supply - real_token_balance == game_itr->circulation && game_itr->circulation >= asset(0, GAME_SYMBOL), "circulation leaks");
 
     }
 
