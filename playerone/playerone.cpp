@@ -269,10 +269,9 @@ public:
             .send();
         }
 
-        auto eos_token = eosio::token(TOKEN_CONTRACT);
-        asset real_eos_balance = eos_token.get_balance(_self, symbol_type(CORE_SYMBOL).name());
-        asset real_token_supply = eos_token.get_supply(symbol_type(GAME_SYMBOL).name());
-        asset real_token_balance = eos_token.get_balance(_self, symbol_type(GAME_SYMBOL).name());
+        asset real_eos_balance = eosio::token(TOKEN_CONTRACT).get_balance(_self, symbol_type(CORE_SYMBOL).name());
+        asset real_token_supply = eosio::token(GAME_TOKEN_CONTRACT).get_supply(symbol_type(GAME_SYMBOL).name());
+        asset real_token_balance = eosio::token(GAME_TOKEN_CONTRACT).get_balance(_self, symbol_type(GAME_SYMBOL).name());
         eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
         eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
         eosio_assert(real_token_balance == game_itr->balance, "token balance leaks");
@@ -416,10 +415,9 @@ public:
             .send();
         }
 
-        auto eos_token = eosio::token(TOKEN_CONTRACT);
-        asset real_eos_balance = eos_token.get_balance(_self, symbol_type(CORE_SYMBOL).name());
-        asset real_token_supply = eos_token.get_supply(symbol_type(GAME_SYMBOL).name());
-        asset real_token_balance = eos_token.get_balance(_self, symbol_type(GAME_SYMBOL).name());
+        asset real_eos_balance = eosio::token(TOKEN_CONTRACT).get_balance(_self, symbol_type(CORE_SYMBOL).name());
+        asset real_token_supply = eosio::token(GAME_TOKEN_CONTRACT).get_supply(symbol_type(GAME_SYMBOL).name());
+        asset real_token_balance = eosio::token(GAME_TOKEN_CONTRACT).get_balance(_self, symbol_type(GAME_SYMBOL).name());
         eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
         eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
         eosio_assert(real_token_balance == game_itr->balance, "token balance leaks");
@@ -524,10 +522,9 @@ public:
             .send();
         }
 
-        auto eos_token = eosio::token(TOKEN_CONTRACT);
-        asset real_eos_balance = eos_token.get_balance(_self, symbol_type(CORE_SYMBOL).name());
-        asset real_token_supply = eos_token.get_supply(symbol_type(GAME_SYMBOL).name());
-        asset real_token_balance = eos_token.get_balance(_self, symbol_type(GAME_SYMBOL).name());
+        asset real_eos_balance = eosio::token(TOKEN_CONTRACT).get_balance(_self, symbol_type(CORE_SYMBOL).name());
+        asset real_token_supply = eosio::token(GAME_TOKEN_CONTRACT).get_supply(symbol_type(GAME_SYMBOL).name());
+        asset real_token_balance = eosio::token(GAME_TOKEN_CONTRACT).get_balance(_self, symbol_type(GAME_SYMBOL).name());
         eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
         eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
         eosio_assert(real_token_balance == game_itr->balance, "token balance leaks");
@@ -614,7 +611,7 @@ extern "C" { \
             /* onerror is only valid if it is for the "eosio" code account and authorized by "eosio"'s "active permission */ \
             eosio_assert(code == N(eosio), "onerror action's are only valid from the \"eosio\" system account"); \
         } \
-        if((code == TOKEN_CONTRACT && action == N(transfer))) { \
+        if((code == TOKEN_CONTRACT && action == N(transfer)) || (code == GAME_TOKEN_CONTRACT && action == N(transfer))) { \
             TYPE thiscontract( self ); \
             switch( action ) { \
                 EOSIO_API( TYPE, MEMBERS ) \
