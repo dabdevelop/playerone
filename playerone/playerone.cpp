@@ -89,9 +89,9 @@ public:
     void buy(account_name account, asset quantity, string memo){
         require_auth(account);
         eosio_assert(quantity.symbol == CORE_SYMBOL, "unexpected asset symbol input");
-        eosio_assert(quantity.amount >= 10000ll && quantity.amount <= 100*10000ll, "quantity must in range 1 - 100 EOS");
+        eosio_assert(quantity.amount >= 10000ll && quantity.amount <= 100 * 10000ll, "quantity must in range 1 - 100 EOS");
 
-        asset exchange_unit = asset(10*10000ll, CORE_SYMBOL);
+        asset exchange_unit = asset(10 * 10000ll, CORE_SYMBOL);
         int64_t times = (quantity / exchange_unit) + 1;
 
         asset deposited_eos = asset(0, CORE_SYMBOL);
@@ -291,7 +291,7 @@ public:
         require_auth(account);
         eosio_assert(quantity.symbol == GAME_SYMBOL, "unexpected asset symbol input");
         eosio_assert(quantity.amount >= 10000ll && quantity.amount <= 1000 * 10000ll, "quantity must in range 1 - 1000 CGT");
-        asset exchange_unit = asset(100*10000ll, CORE_SYMBOL);
+        asset exchange_unit = asset(100 * 10000ll, CORE_SYMBOL);
         asset remain_asset = quantity;
         int64_t times = (quantity / exchange_unit) + 1;
 

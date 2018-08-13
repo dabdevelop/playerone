@@ -1,5 +1,3 @@
-set(TARGET "playerone")
-
 add_executable(${TARGET}.wasm ${CMAKE_CURRENT_SOURCE_DIR}/${TARGET}.cpp)
 target_include_directories(${TARGET}.wasm
    PUBLIC 

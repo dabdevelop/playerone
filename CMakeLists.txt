@@ -1,3 +1,5 @@
+set(TARGET "playerone")
+
 cmake_minimum_required(VERSION 3.5)
 project(eosio_contracts VERSION 1.2.0)
 
@@ -30,7 +32,7 @@ if (NOT "${output}" EQUAL 0)
 endif()
 
 include_directories(AFTER ${BOOST_ROOT}/include)
-add_subdirectory(playerone)
+add_subdirectory(${TARGET})
 
 if (APPLE)
    set(OPENSSL_ROOT "/usr/local/opt/openssl")
