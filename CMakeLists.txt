@@ -33,6 +33,8 @@ endif()
 
 include_directories(AFTER ${BOOST_ROOT}/include)
 add_subdirectory(${TARGET})
+add_subdirectory(eosio.token)
+add_subdirectory(tests)
 
 if (APPLE)
    set(OPENSSL_ROOT "/usr/local/opt/openssl")
@@ -40,4 +42,6 @@ elseif (UNIX)
    set(OPENSSL_ROOT "/usr/include/openssl")
 endif()
 set(SECP256K1_ROOT "/usr/local")
+
+# include(UnitTestsExternalProject.txt)
 
