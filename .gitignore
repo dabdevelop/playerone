@@ -67,7 +67,8 @@ typings/
 
 # cmake
 build/
-playerone/build/
+CMakeFiles/
+CMakeCache.txt
 
 # eos
 include/
