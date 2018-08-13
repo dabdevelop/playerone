@@ -9,6 +9,7 @@
 
 #define GAME_SYMBOL S(4, CGT)
 #define TOKEN_CONTRACT N(eosio.token)
+#define GAME_TOKEN_CONTRACT N(playeroneiss)
 #define BURN_ACCOUNT N(blackholeeos)
 #define FEE_ACCOUNT N(playeronefee)
 
@@ -24,9 +25,9 @@ public:
     const real_type _L = real_type(300000);
     const real_type _D = real_type(75000);
     const real_type _INITIAL_PRICE = real_type(0.01);
-    const real_type _MAX_SUPPLY_TIMES = 20;
-    const int32_t _GAME_INIT_TIME = 1535124913;
-    const int32_t _ACTION_COOL_DOWN = 5;                       // 操作冷却时间(s) 
+    const real_type _MAX_SUPPLY_TIMES = 10;
+    const int64_t _GAME_INIT_TIME = 15341648834;
+    const int64_t _ACTION_COOL_DOWN = 5;                       // 操作冷却时间(s) 
 
     playerone(account_name self)
         : contract(self), 
@@ -42,12 +43,6 @@ public:
                 g.gameid = _self;
                 g.max_supply = asset(_L * _MAX_SUPPLY_TIMES * 10000ll, GAME_SYMBOL);
             });
-
-            action(
-                permission_level{_self, N(active)},
-                TOKEN_CONTRACT, N(create),
-                make_tuple(_self, game_itr->max_supply))
-            .send();
         }
 
         auto user_itr = users.find(FEE_ACCOUNT);
@@ -60,6 +55,7 @@ public:
     };
 
     void transfer(account_name from, account_name to, asset quantity, string memo){
+        require_auth(from);
         if (from == _self || to != _self) {
             return;
         }
@@ -87,7 +83,6 @@ public:
     };
 
     void buy(account_name account, asset quantity, string memo){
-        require_auth(account);
         eosio_assert(quantity.symbol == CORE_SYMBOL, "unexpected asset symbol input");
         eosio_assert(quantity.amount >= 10000ll && quantity.amount <= 100 * 10000ll, "quantity must in range 1 - 100 EOS");
 
@@ -114,7 +109,6 @@ public:
             user_itr = users.emplace(account, [&](auto& u ) {
                 u.name = _self;
                 u.parent = parent;
-                u.last_action = now();
             });
         } else {
             eosio_assert(now() - user_itr->last_action >= _ACTION_COOL_DOWN, "action needs 5 seconds to cool down");
@@ -249,7 +243,6 @@ public:
             g.supply += issue_token;
             g.balance = token_balance;
             g.circulation = circulation;
-            g.crr = crr;
         });
 
         if(refund_eos > asset(0, CORE_SYMBOL)){
@@ -288,7 +281,6 @@ public:
     }
 
     void sell(account_name account, asset quantity, string memo){
-        require_auth(account);
         eosio_assert(quantity.symbol == GAME_SYMBOL, "unexpected asset symbol input");
         eosio_assert(quantity.amount >= 10000ll && quantity.amount <= 1000 * 10000ll, "quantity must in range 1 - 1000 CGT");
         asset exchange_unit = asset(100 * 10000ll, CORE_SYMBOL);
@@ -363,7 +355,6 @@ public:
             user_itr = users.emplace(account, [&](auto& u ) {
                 u.name = _self;
                 u.parent = parent;
-                u.last_action = now();
             });
         } else {
             eosio_assert(now() - user_itr->last_action >= _ACTION_COOL_DOWN, "action needs 5 seconds to cool down");
@@ -407,7 +398,6 @@ public:
             g.insure += action_total_fee;
             g.balance = token_balance;
             g.circulation = circulation;
-            g.crr = crr;
         });
 
         if(remain_asset > asset(0, GAME_SYMBOL)){
@@ -437,7 +427,6 @@ public:
     }
 
     void burn(account_name account, asset quantity, string memo){
-        require_auth(account);
         eosio_assert(quantity.symbol == GAME_SYMBOL, "unexpected asset symbol input");
         eosio_assert(quantity.amount >= 10000ll && quantity.amount <= 1000 * 10000ll, "quantity must in range 1 - 1000 CGT");
         
@@ -487,7 +476,6 @@ public:
             user_itr = users.emplace(account, [&](auto& u ) {
                 u.name = _self;
                 u.parent = parent;
-                u.last_action = now();
             });
         } else {
             eosio_assert(now() - user_itr->last_action >= _ACTION_COOL_DOWN, "action needs 5 seconds to cool down");
@@ -561,7 +549,6 @@ public:
             user_itr = users.emplace(account, [&](auto& u ) {
                 u.name = _self;
                 u.parent = parent;
-                u.last_action = now();
             });
         }
         
@@ -598,11 +585,10 @@ public:
         asset balance = asset(0, GAME_SYMBOL);
         asset circulation = asset(0, GAME_SYMBOL);
         asset burn = asset(0, GAME_SYMBOL);
-        real_type crr = real_type(0.0);
         int64_t start_time = current_time();
 
         uint64_t primary_key() const { return gameid; }
-        EOSLIB_SERIALIZE(game, (gameid)(reserve)(insure)(max_supply)(supply)(balance)(circulation)(burn)(crr)(start_time))
+        EOSLIB_SERIALIZE(game, (gameid)(reserve)(insure)(max_supply)(supply)(balance)(circulation)(burn)(start_time))
     };
     typedef eosio::multi_index<N(game), game> game_index;
     game_index _game;

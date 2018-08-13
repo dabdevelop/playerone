@@ -41,4 +41,4 @@ function generateOfficialAccount(names){
 }
 
 // generateTesters(10);
-generateOfficialAccount(['oneplayerone', 'blackholeeos', 'playeronefee'])
+generateOfficialAccount(['oneplayerone', 'blackholeeos', 'playeronefee', 'playeroneiss'])
