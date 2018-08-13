@@ -1,5 +1,7 @@
 #! /bin/bash
 
+rm -rf build;
+
 printf "\t=========== Building contracts ===========\n\n"
 
 RED='\033[0;31m'

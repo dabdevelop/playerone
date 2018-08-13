@@ -2,3 +2,6 @@ docker run --rm --name eosio -d -p 8888:8888 -p 9876:9876 -v /tmp/work:/work -v 
 
 alias cleos='docker exec -it eosio /opt/eosio/bin/cleos -u http://0.0.0.0:8888 --wallet-url http://0.0.0.0:8888'
 
+rm -rf ~/Library/Application\ Support/eosio/nodeos/data/*
+
+./programs/nodeos/nodeos

@@ -11,10 +11,17 @@ cleos create account eosio oneplayerone EOS4wen3kfDXSHEb4nYmzDkcfvoPZb2jyoRS6mb6
 cleos create account eosio playeroneiss EOS8cgtXLQLtAzRyNytCLdvZGMaixKrt9nmoUkBY4MfULriSg4Uzo EOS8cgtXLQLtAzRyNytCLdvZGMaixKrt9nmoUkBY4MfULriSg4Uzo
 # cleos system newaccount eosio playeroneiss EOS8cgtXLQLtAzRyNytCLdvZGMaixKrt9nmoUkBY4MfULriSg4Uzo EOS8cgtXLQLtAzRyNytCLdvZGMaixKrt9nmoUkBY4MfULriSg4Uzo --stake-net "10.0000 SYS" --stake-cpu "10.0000 SYS" --buy-ram-kbytes 10000
 
-cleos set contract oneplayerone ./build/playerone -p oneplayerone
+# cleos set contract oneplayerone ./build/playerone -p oneplayerone
+cleos set code oneplayerone ./build/playerone/playerone.wasm -p oneplayerone
+cleos set abi oneplayerone ./build/playerone/playerone.abi -p oneplayerone
 cleos set contract playeroneiss ./build/eosio.token -p playeroneiss
 cleos push action playeroneiss create '[ "oneplayerone", "3000000.0000 CGT"]' -p playeroneiss
 
 cleos set account permission oneplayerone active '{"threshold": 1,"keys": [{"key": "EOS4wen3kfDXSHEb4nYmzDkcfvoPZb2jyoRS6mb6EbGJgM5Apu6Go","weight": 1}],"accounts": [{"permission":{"actor":"oneplayerone","permission":"eosio.code"},"weight":1}]}' owner -p oneplayerone
 
-cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "1.0000 EOS", ""]' -p testuseraaaa
+# cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "10.0000 EOS", "deposit"]' -p testuseraaaa
+cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "100.0000 EOS", ""]' -p testuseraaaa
+# cleos push action playeroneiss transfer '["testuseraaaa", "oneplayerone", "100.0000 CGT", ""]' -p testuseraaaa
+
+cleos get table oneplayerone oneplayerone game
+cleos get table oneplayerone oneplayerone users
