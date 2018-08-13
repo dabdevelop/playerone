@@ -10,6 +10,7 @@
 #define GAME_SYMBOL S(4, CGT)
 #define TOKEN_CONTRACT N(eosio.token)
 #define BURN_ACCOUNT N(eosio.token)
+#define FEE_ACCOUNT N(itewhitehole)
 
 typedef double real_type;
 
@@ -25,6 +26,7 @@ public:
     const real_type _INITIAL_PRICE = real_type(0.01);
     const real_type _MAX_SUPPLY_TIMES = 20;
     const int32_t _GAME_INIT_TIME = 1535124913;
+    const int32_t _ACTION_COOL_DOWN = 5;                       // 操作冷却时间(s) 
 
     playerone(account_name self)
         : contract(self), 
@@ -62,21 +64,21 @@ public:
             if(memo == "deposit"){
                 deposit(quantity);
             } else {
-                buy(from, quantity);
+                buy(from, quantity, memo);
             }
         } else if(quantity.symbol == GAME_SYMBOL) {
             eosio_assert(quantity.symbol == GAME_SYMBOL, "unexpected asset symbol input");
             if(memo == "burn"){
-                burn(from, quantity);
+                burn(from, quantity, memo);
             } else {
-                sell(from, quantity);
+                sell(from, quantity, memo);
             }
         } else {
             eosio_assert(false, "do not send other funds to this contract");
         }
     };
 
-    void buy(account_name account, asset quantity){
+    void buy(account_name account, asset quantity, string memo){
         require_auth(account);
         eosio_assert(quantity.symbol == CORE_SYMBOL, "unexpected asset symbol input");
         eosio_assert(quantity.amount >= 10000ll && quantity.amount <= 100*10000ll, "quantity must in range 1 - 100 EOS");
@@ -88,7 +90,57 @@ public:
         asset insured_eos = asset(0, CORE_SYMBOL);
         asset exchanged_eos = asset(0, CORE_SYMBOL);
         asset issued_eos = asset(0, CORE_SYMBOL);
-        asset remain_eos = quantity;
+        asset fee = quantity;
+        fee.amount = (fee.amount + 99) / 100; /// 1% fee (round up)
+        asset action_total_fee = fee;
+
+        asset quant_after_fee = quantity;
+        quant_after_fee.amount -= fee.amount;
+
+        auto user_itr = users.find(account);
+        if(user_itr == users.end()){
+            auto parent = string_to_name(memo.c_str());
+            auto parent_itr = users.find(parent);
+            if(memo.size() <= 0 || memo.size()> 12 || parent == _self || account == parent || parent_itr == users.end() || account == FEE_ACCOUNT){
+                parent = FEE_ACCOUNT;
+            }
+            user_itr = users.emplace(account, [&](auto& u ) {
+                u.name = _self;
+                u.parent = parent;
+                u.last_action = now();
+            });
+        } else {
+            eosio_assert(now() - user_itr->last_action >= _ACTION_COOL_DOWN, "action needs 5 seconds to cool down");
+            users.modify(user_itr, 0, [&](auto& u ) {
+                u.last_action = now();
+            });
+        }
+
+        if (fee.amount > 0)
+        {
+            auto refer_fee = fee;
+            refer_fee.amount = fee.amount / 2;
+            fee.amount -= refer_fee.amount;
+
+            action(
+                permission_level{_self, N(active)},
+                TOKEN_CONTRACT, N(transfer),
+                make_tuple(_self, user_itr->parent, fee, string("refer fee")))
+            .send();
+
+            auto parent_itr = users.find(user_itr->parent);
+
+            if (refer_fee.amount > 0)
+            {
+                action(
+                    permission_level{_self, N(active)},
+                    TOKEN_CONTRACT, N(transfer),
+                    make_tuple(_self, parent_itr->parent, refer_fee, string("refer fee")))
+                .send();
+            }
+        }
+
+        asset remain_eos = quant_after_fee;
         asset transfer_token_amount = asset(0, GAME_SYMBOL);
         asset issue_token_amount = asset(0, GAME_SYMBOL);
 
@@ -221,7 +273,7 @@ public:
 
     }
 
-    void sell(account_name account, asset quantity){
+    void sell(account_name account, asset quantity, string memo){
         require_auth(account);
         eosio_assert(quantity.symbol == GAME_SYMBOL, "unexpected asset symbol input");
         eosio_assert(quantity.amount >= 10000ll && quantity.amount <= 1000 * 10000ll, "quantity must in range 1 - 1000 CGT");
@@ -280,6 +332,55 @@ public:
             g.crr = crr;
         });
 
+        asset fee = transfer_eos;
+        fee.amount = (fee.amount + 99) / 100; /// 1% fee (round up)
+        asset action_total_fee = fee;
+
+        asset quant_after_fee = transfer_eos;
+        quant_after_fee.amount -= fee.amount;
+
+        auto user_itr = users.find(account);
+        if(user_itr == users.end()){
+            auto parent = string_to_name(memo.c_str());
+            auto parent_itr = users.find(parent);
+            if(memo.size() <= 0 || memo.size()> 12 || parent == _self || account == parent || parent_itr == users.end() || account == FEE_ACCOUNT){
+                parent = FEE_ACCOUNT;
+            }
+            user_itr = users.emplace(account, [&](auto& u ) {
+                u.name = _self;
+                u.parent = parent;
+                u.last_action = now();
+            });
+        } else {
+            eosio_assert(now() - user_itr->last_action >= _ACTION_COOL_DOWN, "action needs 5 seconds to cool down");
+            users.modify(user_itr, 0, [&](auto& u ) {
+                u.last_action = now();
+            });
+        }
+
+        if (fee.amount > 0)
+        {
+            auto refer_fee = fee;
+            refer_fee.amount = fee.amount / 2;
+            fee.amount -= refer_fee.amount;
+
+            action(
+                permission_level{_self, N(active)},
+                TOKEN_CONTRACT, N(transfer),
+                make_tuple(_self, user_itr->parent, fee, string("refer fee")))
+            .send();
+
+            auto parent_itr = users.find(user_itr->parent);
+
+            if (refer_fee.amount > 0)
+            {
+                action(
+                    permission_level{_self, N(active)},
+                    TOKEN_CONTRACT, N(transfer),
+                    make_tuple(_self, parent_itr->parent, refer_fee, string("refer fee")))
+                .send();
+            }
+        }
 
         if(remain_asset > asset(0, GAME_SYMBOL)){
             action(
@@ -293,7 +394,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, transfer_eos, string("sell")))
+                make_tuple(_self, account, quant_after_fee, string("sell")))
             .send();
         }
 
@@ -307,7 +408,7 @@ public:
         eosio_assert(real_token_supply - real_token_balance == game_itr->circulation && game_itr->circulation >= asset(0, GAME_SYMBOL), "circulation leaks");
     }
 
-    void burn(account_name account, asset quantity){
+    void burn(account_name account, asset quantity, string memo){
         require_auth(account);
         eosio_assert(quantity.symbol == GAME_SYMBOL, "unexpected asset symbol input");
         eosio_assert(quantity.amount >= 10000ll && quantity.amount <= 1000 * 10000ll, "quantity must in range 1 - 1000 CGT");
@@ -336,6 +437,56 @@ public:
             g.circulation -= quantity;
             g.burn += quantity;
         });
+
+        asset fee = transfer_eos;
+        fee.amount = (fee.amount + 99) / 100; /// 1% fee (round up)
+        asset action_total_fee = fee;
+
+        asset quant_after_fee = transfer_eos;
+        quant_after_fee.amount -= fee.amount;
+
+        auto user_itr = users.find(account);
+        if(user_itr == users.end()){
+            auto parent = string_to_name(memo.c_str());
+            auto parent_itr = users.find(parent);
+            if(memo.size() <= 0 || memo.size()> 12 || parent == _self || account == parent || parent_itr == users.end() || account == FEE_ACCOUNT){
+                parent = FEE_ACCOUNT;
+            }
+            user_itr = users.emplace(account, [&](auto& u ) {
+                u.name = _self;
+                u.parent = parent;
+                u.last_action = now();
+            });
+        } else {
+            eosio_assert(now() - user_itr->last_action >= _ACTION_COOL_DOWN, "action needs 5 seconds to cool down");
+            users.modify(user_itr, 0, [&](auto& u ) {
+                u.last_action = now();
+            });
+        }
+
+        if (fee.amount > 0)
+        {
+            auto refer_fee = fee;
+            refer_fee.amount = fee.amount / 2;
+            fee.amount -= refer_fee.amount;
+
+            action(
+                permission_level{_self, N(active)},
+                TOKEN_CONTRACT, N(transfer),
+                make_tuple(_self, user_itr->parent, fee, string("refer fee")))
+            .send();
+
+            auto parent_itr = users.find(user_itr->parent);
+
+            if (refer_fee.amount > 0)
+            {
+                action(
+                    permission_level{_self, N(active)},
+                    TOKEN_CONTRACT, N(transfer),
+                    make_tuple(_self, parent_itr->parent, refer_fee, string("refer fee")))
+                .send();
+            }
+        }
 
         if(quantity > asset(0, GAME_SYMBOL)){
             action(
