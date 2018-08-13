@@ -14,6 +14,7 @@ cleos create account eosio playeroneiss EOS8cgtXLQLtAzRyNytCLdvZGMaixKrt9nmoUkBY
 # cleos set contract oneplayerone ./build/playerone -p oneplayerone
 cleos set code oneplayerone ./build/playerone/playerone.wasm -p oneplayerone
 cleos set abi oneplayerone ./build/playerone/playerone.abi -p oneplayerone
+
 cleos set contract playeroneiss ./build/eosio.token -p playeroneiss
 cleos push action playeroneiss create '[ "oneplayerone", "3000000.0000 CGT"]' -p playeroneiss
 
@@ -21,7 +22,7 @@ cleos set account permission oneplayerone active '{"threshold": 1,"keys": [{"key
 
 # cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "10.0000 EOS", "deposit"]' -p testuseraaaa
 cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "100.0000 EOS", ""]' -p testuseraaaa
-# cleos push action playeroneiss transfer '["testuseraaaa", "oneplayerone", "100.0000 CGT", ""]' -p testuseraaaa
+cleos push action playeroneiss transfer '["testuseraaaa", "oneplayerone", "100.0000 CGT", ""]' -p testuseraaaa
 
 cleos get table oneplayerone oneplayerone game
 cleos get table oneplayerone oneplayerone users
