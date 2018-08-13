@@ -9,8 +9,8 @@
 
 #define GAME_SYMBOL S(4, CGT)
 #define TOKEN_CONTRACT N(eosio.token)
-#define BURN_ACCOUNT N(eosio.token)
-#define FEE_ACCOUNT N(itewhitehole)
+#define BURN_ACCOUNT N(blackholeeos)
+#define FEE_ACCOUNT N(playeronefee)
 
 typedef double real_type;
 
