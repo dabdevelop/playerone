@@ -96,13 +96,16 @@ public:
         fee.amount = (fee.amount + 99) / 100; /// 1% fee (first round up)
         
         asset quant_after_fee = quantity;
-        quant_after_fee.amount -= fee.amount;
+        quant_after_fee -= fee;
 
         auto user_itr = users.find(account);
         if(user_itr == users.end()){
             auto parent = string_to_name(memo.c_str());
             auto parent_itr = users.find(parent);
             if(memo.size() <= 0 || memo.size()> 12 || parent == _self || account == parent || parent_itr == users.end() || account == FEE_ACCOUNT){
+                parent = FEE_ACCOUNT;
+            }
+            if(parent_itr != users.end() && parent_itr->refer == 0){
                 parent = FEE_ACCOUNT;
             }
             user_itr = users.emplace(account, [&](auto &u) {
@@ -117,19 +120,18 @@ public:
             });
         }
 
+        auto parent_itr = users.find(user_itr->parent);
         if (fee.amount > 0)
         {
             auto refer_fee = fee;
-            refer_fee.amount = fee.amount / 2;
-            fee.amount -= refer_fee.amount;
+            refer_fee = fee / 2;
+            fee -= refer_fee;
 
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, user_itr->parent, fee, string("refer fee")))
+                make_tuple(_self, parent_itr->name, fee, string("refer fee")))
             .send();
-
-            auto parent_itr = users.find(user_itr->parent);
 
             if (refer_fee.amount > 0)
             {
@@ -142,9 +144,14 @@ public:
         }
 
         fee.amount = quant_after_fee.amount;
-        fee.amount = (fee.amount + 99) / 100; /// 1% fee (second round up)
+        if(parent_itr->refer == 0){
+            fee.amount = (fee.amount + 49) / 50; /// 2% fee (second round up)
+        } else {
+            fee.amount = (fee.amount + 99) / 100; /// 1% fee (reduce half of the fee with a refer)
+        }
+        
         asset action_total_fee = fee;
-        quant_after_fee.amount -= fee.amount;
+        quant_after_fee -= fee;
 
         asset remain_eos = quant_after_fee;
         asset transfer_token = asset(0, GAME_SYMBOL);
@@ -269,7 +276,7 @@ public:
         asset real_eos_balance = eosio::token(TOKEN_CONTRACT).get_balance(_self, symbol_type(CORE_SYMBOL).name());
         asset real_token_supply = eosio::token(GAME_TOKEN_CONTRACT).get_supply(symbol_type(GAME_SYMBOL).name());
         // asset real_token_balance = eosio::token(GAME_TOKEN_CONTRACT).get_balance(_self, symbol_type(GAME_SYMBOL).name());
-        eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
+        // eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
         eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
         // eosio_assert(real_token_balance == game_itr->balance, "token balance leaks");
         // eosio_assert(real_token_supply - real_token_balance == game_itr->circulation && game_itr->circulation >= asset(0, GAME_SYMBOL), "circulation leaks");
@@ -331,13 +338,16 @@ public:
         fee.amount = (fee.amount + 99) / 100; /// 1% fee (first round up)
 
         asset quant_after_fee = transfer_eos;
-        quant_after_fee.amount -= fee.amount;
+        quant_after_fee -= fee;
 
         auto user_itr = users.find(account);
         if(user_itr == users.end()){
             auto parent = string_to_name(memo.c_str());
             auto parent_itr = users.find(parent);
             if(memo.size() <= 0 || memo.size()> 12 || parent == _self || account == parent || parent_itr == users.end() || account == FEE_ACCOUNT){
+                parent = FEE_ACCOUNT;
+            }
+            if(parent_itr != users.end() && parent_itr->refer == 0){
                 parent = FEE_ACCOUNT;
             }
             user_itr = users.emplace(account, [&](auto &u) {
@@ -352,19 +362,19 @@ public:
             });
         }
 
+        auto parent_itr = users.find(user_itr->parent);
+
         if (fee.amount > 0)
         {
             auto refer_fee = fee;
-            refer_fee.amount = fee.amount / 2;
-            fee.amount -= refer_fee.amount;
+            refer_fee = fee / 2;
+            fee -= refer_fee;
 
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, user_itr->parent, fee, string("refer fee")))
+                make_tuple(_self, parent_itr->name, fee, string("refer fee")))
             .send();
-
-            auto parent_itr = users.find(user_itr->parent);
 
             if (refer_fee.amount > 0)
             {
@@ -377,10 +387,14 @@ public:
         }
 
         fee.amount = quant_after_fee.amount;
-        fee.amount = (fee.amount + 99) / 100; /// 1% fee (second round up)
-        asset action_total_fee = fee;
+        if(parent_itr->refer == 0){
+            fee.amount = (fee.amount + 49) / 50; /// 2% fee (second round up)
+        } else {
+            fee.amount = (fee.amount + 99) / 100; /// 1% fee (reduce half of the fee with a refer)
+        }
 
-        quant_after_fee.amount -= fee.amount;
+        asset action_total_fee = fee;
+        quant_after_fee -= fee;
 
         _game.modify(game_itr, 0, [&](auto &g) {
             g.reserve -= quant_after_fee;
@@ -408,7 +422,7 @@ public:
         asset real_eos_balance = eosio::token(TOKEN_CONTRACT).get_balance(_self, symbol_type(CORE_SYMBOL).name());
         asset real_token_supply = eosio::token(GAME_TOKEN_CONTRACT).get_supply(symbol_type(GAME_SYMBOL).name());
         // asset real_token_balance = eosio::token(GAME_TOKEN_CONTRACT).get_balance(_self, symbol_type(GAME_SYMBOL).name());
-        eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
+        // eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
         eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
         // eosio_assert(real_token_balance == game_itr->balance, "token balance leaks");
         // eosio_assert(real_token_supply - real_token_balance == game_itr->circulation && game_itr->circulation >= asset(0, GAME_SYMBOL), "circulation leaks");
@@ -440,13 +454,16 @@ public:
         asset action_total_fee = fee;
 
         asset quant_after_fee = transfer_eos;
-        quant_after_fee.amount -= fee.amount;
+        quant_after_fee -= fee;
 
         auto user_itr = users.find(account);
         if(user_itr == users.end()){
             auto parent = string_to_name(memo.c_str());
             auto parent_itr = users.find(parent);
             if(memo.size() <= 0 || memo.size()> 12 || parent == _self || account == parent || parent_itr == users.end() || account == FEE_ACCOUNT){
+                parent = FEE_ACCOUNT;
+            }
+            if(parent_itr != users.end() && parent_itr->refer == 0){
                 parent = FEE_ACCOUNT;
             }
             user_itr = users.emplace(account, [&](auto &u) {
@@ -464,8 +481,8 @@ public:
         if (fee.amount > 0)
         {
             auto refer_fee = fee;
-            refer_fee.amount = fee.amount / 2;
-            fee.amount -= refer_fee.amount;
+            refer_fee = fee / 2;
+            fee -= refer_fee;
 
             action(
                 permission_level{_self, N(active)},
@@ -529,11 +546,20 @@ public:
             if(memo.size() <= 0 || memo.size()> 12 || parent == _self || account == parent || parent_itr == users.end() || account == FEE_ACCOUNT){
                 parent = FEE_ACCOUNT;
             }
-            user_itr = users.emplace(account, [&](auto &u) {
-                u.name = account;
-                u.parent = parent;
-                u.last_action = now();
-            });
+            if(user_itr == users.end()){
+                user_itr = users.emplace(account, [&](auto &u) {
+                    u.name = account;
+                    u.parent = parent;
+                    u.refer = 1;
+                    u.last_action = now();
+                });
+            } else {
+                users.modify(user_itr, 0, [&](auto &u) {
+                    u.refer = 1;
+                    u.last_action = now();
+                });
+            }
+            
         }
         
         auto game_itr = _game.begin();
@@ -589,9 +615,10 @@ public:
         account_name name;
         account_name parent;
         uint64_t last_action;
+        uint32_t refer = 0;
 
         uint64_t primary_key() const { return name; }
-        EOSLIB_SERIALIZE(user, (name)(parent)(last_action))
+        EOSLIB_SERIALIZE(user, (name)(parent)(last_action)(refer))
     };
     typedef eosio::multi_index<N(users), user> user_index;
     user_index users;
