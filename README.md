@@ -15,6 +15,7 @@
 `nodeos` uses a custom configuration folder. The location of this folder is determined by your system.
 
 > Mac OS: ~/Library/Application\ Support/eosio/nodeos/config
+
 > Linux: ~/.local/share/eosio/nodeos/config
 
 For example, on Mac:
