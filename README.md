@@ -24,6 +24,11 @@ For example, on Mac:
     cp ./config.ini ~/Library/Application\ Support/eosio/nodeos/config
 ```
 
+Then maybe you need change this two dir path in `eos_init.sh`
+```bash
+    EOS_HOME=../eos
+    EOS_CONTRACT_HOME=../eosio.contracts
+```
 
 #### You need to import the eosio master key to get root privilege in eos
 
