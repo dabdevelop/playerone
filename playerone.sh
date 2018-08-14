@@ -1,3 +1,5 @@
+#! /bin/bash
+
 cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "10.0000 EOS", "deposit"]' -p testuseraaaa
 cleos push action eosio.token transfer '["testuseraaai", "oneplayerone", "1.0000 EOS", "deposit"]' -p testuseraaai
 
@@ -82,5 +84,3 @@ done
 
 cleos get table oneplayerone oneplayerone game
 cleos get table oneplayerone oneplayerone users
-
-cleos push action playeroneiss transfer '["testuseraaaj", "oneplayerone", "100.1111 CGT", ""]' -p testuseraaaj

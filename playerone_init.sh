@@ -1,3 +1,5 @@
+#! /bin/bash
+
 # blackholeeos = EOS5PW5ZchfiCF2uPuFUEt8xseS1wiNqBjCHQTYxXT3unLNamrpwi=KEY:5KaVNWNF2LtdxBT8fGUV81yXZjKiu7qdR28myrUKEXcem8gc1qy
 cleos create account eosio blackholeeos EOS5PW5ZchfiCF2uPuFUEt8xseS1wiNqBjCHQTYxXT3unLNamrpwi EOS5PW5ZchfiCF2uPuFUEt8xseS1wiNqBjCHQTYxXT3unLNamrpwi
 # playeronefee = EOS7AH473AJ1Dix3x7SjMU9tjsG7Fo79JZq9GuZjL9f5FCu6rUhza=KEY:5KNGa5bkAW8sP5dqcYNHQSvAXQtsfU9yyLr87SBvE7F3RyonUZ1
@@ -16,7 +18,7 @@ cleos set code oneplayerone ./build/playerone/playerone.wasm -p oneplayerone
 cleos set abi oneplayerone ./build/playerone/playerone.abi -p oneplayerone
 
 cleos set contract playeroneiss ./build/eosio.token -p playeroneiss
-cleos push action playeroneiss create '[ "oneplayerone", "3000000.0000 CGT"]' -p playeroneiss
+cleos push action playeroneiss create '[ "oneplayerone", "10000000.0000 CGT"]' -p playeroneiss
 
 cleos set account permission oneplayerone active '{"threshold": 1,"keys": [{"key": "EOS4wen3kfDXSHEb4nYmzDkcfvoPZb2jyoRS6mb6EbGJgM5Apu6Go","weight": 1}],"accounts": [{"permission":{"actor":"oneplayerone","permission":"eosio.code"},"weight":1}]}' owner -p oneplayerone
 
