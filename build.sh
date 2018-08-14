@@ -1,6 +1,8 @@
 #! /bin/bash
 
-rm -rf build/playerone;
+if [ -d "build/playerone" ]; then
+  rm -rf build/playerone;
+fi
 
 printf "\t=========== Building contracts ===========\n\n"
 
