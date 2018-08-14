@@ -319,11 +319,11 @@ public:
             }
             crr = _crr(circulation);
 
-            //TODO
+            //TODO test the cast from uint64_t to real_type
 
             token_price = real_type(reserve_balance.amount) / (real_type(circulation.amount) * crr);
 
-            //TODO
+            //TODO test the cast from real_type to uint64_t
 
             asset eos_per_exchange = asset(real_type(exchange_unit.amount) * token_price, CORE_SYMBOL);
             reserve_balance -= eos_per_exchange;
@@ -332,7 +332,7 @@ public:
             }
             token_price = reserve_balance.amount / (circulation.amount * crr);
 
-            //TODO
+            //TODO test the cast from real_type to uint64_t
 
             eos_per_exchange = asset(real_type(exchange_unit.amount) * token_price, CORE_SYMBOL);
             transfer_eos += eos_per_exchange;
@@ -460,11 +460,11 @@ public:
         eosio_assert(token_supply >= token_balance, "shit happens");
         asset circulation = token_supply - token_balance;
 
-        //TODO
+        //TODO test the cast from uint64_t to real_type
 
         real_type token_price = real_type(insure_balance.amount) / real_type(circulation.amount);
 
-        //TODO
+        //TODO test the cast from real_type to uint64_t
 
         asset transfer_eos = asset(token_price * quantity.amount, CORE_SYMBOL);
 
