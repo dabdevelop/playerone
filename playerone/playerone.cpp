@@ -27,7 +27,7 @@ public:
     const int64_t _INITIAL_PRICE = 100ll;
     const int64_t _MAX_SUPPLY_TIMES = 10ll;
     //TODO set the time to future game init time
-    const int64_t _GAME_INIT_TIME = 15341787619ll;
+    const int64_t _GAME_INIT_TIME = 0ll;
     //TODO 1 second to cool down
     const int64_t _ACTION_COOL_DOWN = 0ll;
 
@@ -71,7 +71,7 @@ public:
             if(memo == "deposit"){
                 deposit(from, quantity, memo);
             } else {
-                // eosio_assert(now() >= _GAME_INIT_TIME, "game will start at 15341787619");
+                eosio_assert( now() >= _GAME_INIT_TIME, "game will start at 15341787619");
                 buy(from, quantity, memo);
             }
         } else if(quantity.symbol == GAME_SYMBOL) {
@@ -235,8 +235,8 @@ public:
 
                 //TODO test the cast from real_type to uint64_t
                 real_type INITIAL_PRICE(_INITIAL_PRICE);
-                real_type UINT(10000.0);
-                INITIAL_PRICE = INITIAL_PRICE / UINT;
+                real_type UNIT(10000.0);
+                INITIAL_PRICE = INITIAL_PRICE / UNIT;
                 asset token_per_issue = asset(to_issue_eos.amount / INITIAL_PRICE, GAME_SYMBOL);
                 circulation += token_per_issue;
                 issue_token += token_per_issue;
@@ -292,8 +292,8 @@ public:
         asset real_eos_balance = eosio::token(TOKEN_CONTRACT).get_balance(_self, symbol_type(CORE_SYMBOL).name());
         asset real_token_supply = eosio::token(GAME_TOKEN_CONTRACT).get_supply(symbol_type(GAME_SYMBOL).name());
         // asset real_token_balance = eosio::token(GAME_TOKEN_CONTRACT).get_balance(_self, symbol_type(GAME_SYMBOL).name());
-        // eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
-        // eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
+        eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
+        eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
         // eosio_assert(real_token_balance == game_itr->balance, "token balance leaks");
         // eosio_assert(real_token_supply - real_token_balance == game_itr->circulation && game_itr->circulation >= asset(0, GAME_SYMBOL), "circulation leaks");
     }
@@ -446,11 +446,11 @@ public:
 
         asset real_eos_balance = eosio::token(TOKEN_CONTRACT).get_balance(_self, symbol_type(CORE_SYMBOL).name());
         asset real_token_supply = eosio::token(GAME_TOKEN_CONTRACT).get_supply(symbol_type(GAME_SYMBOL).name());
-        // asset real_token_balance = eosio::token(GAME_TOKEN_CONTRACT).get_balance(_self, symbol_type(GAME_SYMBOL).name());
-        // eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
-        // eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
-        // eosio_assert(real_token_balance == game_itr->balance, "token balance leaks");
-        // eosio_assert(real_token_supply - real_token_balance == game_itr->circulation && game_itr->circulation >= asset(0, GAME_SYMBOL), "circulation leaks");
+        asset real_token_balance = eosio::token(GAME_TOKEN_CONTRACT).get_balance(_self, symbol_type(GAME_SYMBOL).name());
+        eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
+        eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
+        eosio_assert(real_token_balance == game_itr->balance, "token balance leaks");
+        eosio_assert(real_token_supply - real_token_balance == game_itr->circulation && game_itr->circulation >= asset(0, GAME_SYMBOL), "circulation leaks");
     }
 
     void burn(account_name account, asset quantity, string memo){
@@ -558,17 +558,15 @@ public:
             .send();
         }
 
-        // asset real_eos_balance = eosio::token(TOKEN_CONTRACT).get_balance(_self, symbol_type(CORE_SYMBOL).name());
-        // asset real_token_supply = eosio::token(GAME_TOKEN_CONTRACT).get_supply(symbol_type(GAME_SYMBOL).name());
+        asset real_eos_balance = eosio::token(TOKEN_CONTRACT).get_balance(_self, symbol_type(CORE_SYMBOL).name());
+        asset real_token_supply = eosio::token(GAME_TOKEN_CONTRACT).get_supply(symbol_type(GAME_SYMBOL).name());
         // asset real_token_balance = eosio::token(GAME_TOKEN_CONTRACT).get_balance(_self, symbol_type(GAME_SYMBOL).name());
         // asset real_token_burn = eosio::token(GAME_TOKEN_CONTRACT).get_balance(BURN_ACCOUNT, symbol_type(GAME_SYMBOL).name());
-        // eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
-        // eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
+        eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
+        eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
         // eosio_assert(real_token_burn == game_itr->burn, "token burn leaks");
         // eosio_assert(real_token_balance == game_itr->balance, "token balance leaks");
         // eosio_assert(real_token_supply - real_token_balance == game_itr->circulation && game_itr->circulation >= asset(0, GAME_SYMBOL), "circulation leaks");
-
-
     }
 
     void deposit(account_name account, asset quantity, string memo){
@@ -627,10 +625,11 @@ public:
         real_type D(_D);
         real_type ONE(1.0);
         real_type H(100.0);
+        real_type UNIT(10000.0);
         real_type E(2.71828182845904);
 
         real_type X(circulation.amount);
-        X = X / real_type(10000.0);
+        X = X / UNIT;
         
         real_type R = ONE / (ONE + pow(E, (X - L) / D)) * A + B;
         eosio_assert(R >= B && R <= B + A, "shit happens");
