@@ -155,7 +155,7 @@ public:
         }
 
         fee.amount = quant_after_fee.amount;
-        if(parent_itr->discount == 0){
+        if(user_itr->discount == 0){
             fee.amount = (fee.amount + 49) / 50; /// 2% fee (second round up)
         } else {
             fee.amount = (fee.amount + 99) / 100; /// 1% fee (discount half of the fee with a refer)
@@ -409,7 +409,7 @@ public:
         }
 
         fee.amount = quant_after_fee.amount;
-        if(parent_itr->discount == 0){
+        if(user_itr->discount == 0){
             fee.amount = (fee.amount + 49) / 50; /// 2% fee (second round up)
         } else {
             fee.amount = (fee.amount + 99) / 100; /// 1% fee (discount half of the fee with a refer)
