@@ -3,8 +3,8 @@
 # signature-provider = EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV=KEY:5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
 # cleos wallet import -h --private-key 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
 
-EOS_HOME=/Users/taofeng/Github/eos
-EOS_CONTRACT_HOME=/Users/taofeng/Github/eosio.contracts
+EOS_HOME=../eos
+EOS_CONTRACT_HOME=../eosio.contracts
 
 cleos set contract eosio ${EOS_HOME}/build/contracts/eosio.bios -p eosio@active
 
