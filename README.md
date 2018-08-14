@@ -14,14 +14,14 @@
 
 `nodeos` uses a custom configuration folder. The location of this folder is determined by your system.
 
-> Mac OS: ~/Library/Application\ Support/eosio/nodeos/config
+> Mac OS: ~/Library/Application\ Support/eosio/nodeos/config/
 
-> Linux: ~/.local/share/eosio/nodeos/config
+> Linux: ~/.local/share/eosio/nodeos/config/
 
 For example, on Mac:
 
 ```bash
-    cp ./config.ini ~/Library/Application\ Support/eosio/nodeos/config
+    cp ./config.ini ~/Library/Application\ Support/eosio/nodeos/config/
 ```
 
 Then maybe you need change this two dir path in `eos_init.sh`
