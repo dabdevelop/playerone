@@ -44,14 +44,14 @@ cleos create account eosio testuseraaai EOS6tVvMqXjHKCV37kPdJeDu49UmBgQKPv12ndZT
 # testuseraaaj = EOS5JCzKF1NHnY2Z4EwxG3EjFvoKCukjjzmB1moAU61eqRucGdeqd=KEY:5JTGHQaHSXz6HCqt4QCtabfptz7pCrpmMMLdZD7nbUSRtEvEcuL
 cleos create account eosio testuseraaaj EOS5JCzKF1NHnY2Z4EwxG3EjFvoKCukjjzmB1moAU61eqRucGdeqd EOS5JCzKF1NHnY2Z4EwxG3EjFvoKCukjjzmB1moAU61eqRucGdeqd
 
-cleos transfer eosio.token testuseraaaa "10000 EOS" "test" -p eosio.token
-cleos transfer eosio.token testuseraaab "10000 EOS" "test" -p eosio.token
-cleos transfer eosio.token testuseraaac "10000 EOS" "test" -p eosio.token
-cleos transfer eosio.token testuseraaad "10000 EOS" "test" -p eosio.token
-cleos transfer eosio.token testuseraaae "10000 EOS" "test" -p eosio.token
-cleos transfer eosio.token testuseraaaf "10000 EOS" "test" -p eosio.token
-cleos transfer eosio.token testuseraaag "10000 EOS" "test" -p eosio.token
-cleos transfer eosio.token testuseraaah "10000 EOS" "test" -p eosio.token
-cleos transfer eosio.token testuseraaai "10000 EOS" "test" -p eosio.token
-cleos transfer eosio.token testuseraaaj "10000 EOS" "test" -p eosio.token
+cleos transfer eosio.token testuseraaaa "100000 EOS" "test" -p eosio.token
+cleos transfer eosio.token testuseraaab "100000 EOS" "test" -p eosio.token
+cleos transfer eosio.token testuseraaac "100000 EOS" "test" -p eosio.token
+cleos transfer eosio.token testuseraaad "100000 EOS" "test" -p eosio.token
+cleos transfer eosio.token testuseraaae "100000 EOS" "test" -p eosio.token
+cleos transfer eosio.token testuseraaaf "100000 EOS" "test" -p eosio.token
+cleos transfer eosio.token testuseraaag "100000 EOS" "test" -p eosio.token
+cleos transfer eosio.token testuseraaah "100000 EOS" "test" -p eosio.token
+cleos transfer eosio.token testuseraaai "100000 EOS" "test" -p eosio.token
+cleos transfer eosio.token testuseraaaj "100000 EOS" "test" -p eosio.token
 
