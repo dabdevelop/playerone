@@ -25,9 +25,21 @@ cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "100.00
 cleos push action eosio.token transfer '["testuseraaab", "oneplayerone", "100.0000 EOS", "testuseraaaa"]' -p testuseraaab
 cleos push action eosio.token transfer '["testuseraaac", "oneplayerone", "100.0000 EOS", "testuseraaab"]' -p testuseraaac
 cleos push action eosio.token transfer '["testuseraaad", "oneplayerone", "100.0000 EOS", ""]' -p testuseraaad
+cleos push action eosio.token transfer '["testuseraaac", "oneplayerone", "100.0000 EOS", "testuseraaab"]' -p testuseraaac
+cleos push action eosio.token transfer '["testuseraaad", "oneplayerone", "100.0000 EOS", ""]' -p testuseraaad
+cleos push action eosio.token transfer '["testuseraaac", "oneplayerone", "100.0000 EOS", "testuseraaab"]' -p testuseraaac
+cleos push action eosio.token transfer '["testuseraaad", "oneplayerone", "100.0000 EOS", ""]' -p testuseraaad
+cleos push action eosio.token transfer '["testuseraaac", "oneplayerone", "100.0000 EOS", "testuseraaab"]' -p testuseraaac
+cleos push action eosio.token transfer '["testuseraaad", "oneplayerone", "100.0000 EOS", ""]' -p testuseraaad
+cleos push action eosio.token transfer '["testuseraaac", "oneplayerone", "100.0000 EOS", "testuseraaab"]' -p testuseraaac
+cleos push action eosio.token transfer '["testuseraaad", "oneplayerone", "100.0000 EOS", ""]' -p testuseraaad
+cleos push action eosio.token transfer '["testuseraaac", "oneplayerone", "100.0000 EOS", "testuseraaab"]' -p testuseraaac
+cleos push action eosio.token transfer '["testuseraaad", "oneplayerone", "100.0000 EOS", ""]' -p testuseraaad
+
 cleos push action playeroneiss transfer '["testuseraaab", "oneplayerone", "100.0000 CGT", ""]' -p testuseraaab
 cleos push action playeroneiss transfer '["testuseraaac", "oneplayerone", "5000.0000 CGT", "burn"]' -p testuseraaac
 
 
 cleos get table oneplayerone oneplayerone game
 cleos get table oneplayerone oneplayerone users
+

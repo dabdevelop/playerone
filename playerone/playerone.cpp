@@ -26,6 +26,7 @@ public:
     const int64_t _D = 75000ll;
     const int64_t _INITIAL_PRICE = 100ll;
     const int64_t _MAX_SUPPLY_TIMES = 10ll;
+    //TODO set the time to future game init time
     const int64_t _GAME_INIT_TIME = 15341787619ll;
     //TODO 1 second to cool down
     const int64_t _ACTION_COOL_DOWN = 0ll;
@@ -181,7 +182,7 @@ public:
             if(exchange_unit > remain_eos){
                 exchange_unit = remain_eos;
             }
-            if(circulation > asset(10000, GAME_SYMBOL) && token_balance > asset(0, GAME_SYMBOL)){
+            if(circulation > asset(10000 * 10000ll, GAME_SYMBOL) && token_balance > asset(0, GAME_SYMBOL)){
                 crr = _crr(circulation);
 
                 //TODO test the cast from real_type to uint64_t
@@ -213,7 +214,7 @@ public:
 
                     token_price = real_type((reserve_balance + exchange_unit).amount) / (real_type(circulation.amount) * crr);
                     circulation += token_per_exchange;
-                    token_balance += token_per_exchange;
+                    token_balance -= token_per_exchange;
                     transfer_token += token_per_exchange;
 
                     //TODO test the cast from asset to uint64_t
@@ -249,11 +250,11 @@ public:
 
         asset refund_eos = quant_after_fee - deposited_eos - insured_eos;
 
-        eosio_assert(refund_eos == remain_eos && refund_eos >= asset(0, CORE_SYMBOL) && refund_eos <= quant_after_fee, "invalid eos refund");
-        eosio_assert(deposited_eos >= asset(0, CORE_SYMBOL) && insured_eos >= asset(0, CORE_SYMBOL) , "eos deposit or insure must be positive");
-        eosio_assert(exchanged_eos + issued_eos == deposited_eos + insured_eos && quant_after_fee - remain_eos == deposited_eos + insured_eos, "eos not equal");
         eosio_assert(transfer_token <= game_itr->balance, "insufficient token balance");
+        eosio_assert(refund_eos == remain_eos && refund_eos >= asset(0, CORE_SYMBOL) && refund_eos <= quant_after_fee, "invalid eos refund");
+        eosio_assert(deposited_eos >= asset(0, CORE_SYMBOL) && insured_eos >= asset(0, CORE_SYMBOL), "eos deposit or insure must be positive");
         eosio_assert(transfer_token >= asset(0, GAME_SYMBOL) && issue_token >= asset(0, GAME_SYMBOL), "transfer and issue token should not be negetive");
+        eosio_assert(exchanged_eos + issued_eos == deposited_eos + insured_eos && quant_after_fee - remain_eos == deposited_eos + insured_eos, "eos not equal");
         eosio_assert(transfer_token + issue_token >= asset(10000ll, GAME_SYMBOL) && transfer_token + issue_token <= asset(10000 * 10000ll, GAME_SYMBOL), "transfer and issue token must in range 1 - 10000");
 
         _game.modify(game_itr, 0, [&](auto &g) {
@@ -347,8 +348,7 @@ public:
 
         eosio_assert(transfer_eos <= asset(100 * 10000ll, CORE_SYMBOL) && transfer_eos >= asset(10000ll, CORE_SYMBOL), "sell in range 1 - 100 eos");
         eosio_assert(remain_asset >= asset(0, GAME_SYMBOL) && quantity >= remain_asset, "remain asset is invalid");
-        asset _token_balance = game_itr->balance;
-        eosio_assert(quantity - remain_asset == token_balance - _token_balance, "exchange asset is not equal");
+        eosio_assert(quantity - remain_asset == token_balance - game_itr->balance, "exchange asset is not equal");
         eosio_assert(game_itr->reserve >= transfer_eos, "insufficient reserve eos");
 
         asset fee = transfer_eos;
