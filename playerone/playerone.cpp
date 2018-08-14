@@ -22,7 +22,7 @@ class playerone: public contract {
 public:
     const int64_t _B = 5ll;
     const int64_t _A = 100ll - _B * 2;
-    const int64_t _L = 300000ll;
+    const int64_t _L = 1000000ll;
     const int64_t _D = _L / 4;
     const int64_t _INITIAL_PRICE = 100ll;
     const int64_t _MAX_SUPPLY_TIMES = 10ll;

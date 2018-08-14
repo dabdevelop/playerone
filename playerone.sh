@@ -82,3 +82,5 @@ done
 
 cleos get table oneplayerone oneplayerone game
 cleos get table oneplayerone oneplayerone users
+
+cleos push action playeroneiss transfer '["testuseraaaj", "oneplayerone", "100.1111 CGT", ""]' -p testuseraaaj
