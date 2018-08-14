@@ -34,7 +34,7 @@ endif()
 include_directories(AFTER ${BOOST_ROOT}/include)
 add_subdirectory(${TARGET})
 add_subdirectory(eosio.token)
-add_subdirectory(tests)
+# add_subdirectory(tests)
 
 if (APPLE)
    set(OPENSSL_ROOT "/usr/local/opt/openssl")
