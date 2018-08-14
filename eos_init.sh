@@ -1,9 +1,10 @@
 #! /bin/bash
 
-# signature-provider = EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV=KEY:5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
-# cleos wallet import -h --private-key 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
-
+# assume you have pre-installed eos https://github.com/EOSIO/eos
+# assume you have pre-installed eosio.wasmsdk https://github.com/EOSIO/eosio.wasmsdk
+# assume you have pre-installed eosio.contracts https://github.com/EOSIO/eosio.contracts
 # maybe you need change this two dir path
+
 EOS_HOME=../eos
 EOS_CONTRACT_HOME=../eosio.contracts
 
@@ -18,12 +19,31 @@ cleos set contract eosio.system ${EOS_CONTRACT_HOME}/build/eosio.system -p eosio
 cleos create account eosio eosio.sudo EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV
 cleos set contract eosio.sudo ${EOS_CONTRACT_HOME}/build/eosio.sudo -p eosio.sudo@active
 
+# assume you have imported the eosio master key to have root privilege in eos
+# signature-provider = EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV=KEY:5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
+cleos wallet import --private-key 5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3
+
+# assume you have imported the testers' keys
+cleos wallet import --private-key 5KKUS3oXbTQpmL1TqYm8xo8Zy9XNQ6DwwJwuUzAzo2CBRqSRweV
+cleos wallet import --private-key 5JVVQpGNWLz3nUcPDjeixSH6mi2pRW6da9ErLWK3RaMipWJox37
+cleos wallet import --private-key 5K9ZQFXzeesmjdUqPQytg1KKiDGTWSDsW5jQHqUZttVi9VLwrJX
+cleos wallet import --private-key 5JcxRgm2WkD5x482BG3gjE4kJde9CqMutPcq3k2UYYajuNkR5wN
+cleos wallet import --private-key 5JrsSNfzM5YDQmdkYfgRBQtSQ9WZccM6n7CRGrBE9g7CrG6NHhM
+cleos wallet import --private-key 5JYAkZt781wVvtxg3Y41hBRT2SSxEVeNTiyJKKrBXTMGCwKQJCx
+cleos wallet import --private-key 5JSHN5z385ZEikDzdrU1ixZp1XYoNw7m8X9s1LYaUWxt3Y3gbDG
+cleos wallet import --private-key 5KGx9WDVGWeXU7twpQ9dRsJUEsk4tf7b4UcLEYT8JANJyeiUsyD
+cleos wallet import --private-key 5KCa3Pvq5APMZYCz3qABisnDA1sUtYiKwinLWU7aHqv2kU7BQYb
+cleos wallet import --private-key 5KA7efGfZdFpgEX37uPiDQAarfacs5X5W6GUzk9kdQzhrSZJiW9
+cleos wallet import --private-key 5JTGHQaHSXz6HCqt4QCtabfptz7pCrpmMMLdZD7nbUSRtEvEcuL
+
+
 # eosio.token = EOS87infeXNHe3cRzc71MNcQESM6DFWYjMU5MvSSrji7nup4x4K2E=KEY:5KKUS3oXbTQpmL1TqYm8xo8Zy9XNQ6DwwJwuUzAzo2CBRqSRweV
 cleos create account eosio eosio.token EOS87infeXNHe3cRzc71MNcQESM6DFWYjMU5MvSSrji7nup4x4K2E EOS87infeXNHe3cRzc71MNcQESM6DFWYjMU5MvSSrji7nup4x4K2E
 cleos set contract eosio.token ./build/eosio.token -p eosio.token
 
 cleos push action eosio.token create '[ "eosio.token", "1000000000.0000 EOS"]' -p eosio.token
 cleos push action eosio.token issue '[ "eosio.token", "1000000000.0000 EOS", "initial supply" ]' -p eosio.token
+
 
 # testuseraaaa = EOS7aozLD8SsjCtxhMTfDaCh6PBrQKwJ1NvSDCtxe4SvkmzkmLudm=KEY:5JVVQpGNWLz3nUcPDjeixSH6mi2pRW6da9ErLWK3RaMipWJox37
 cleos create account eosio testuseraaaa EOS7aozLD8SsjCtxhMTfDaCh6PBrQKwJ1NvSDCtxe4SvkmzkmLudm EOS7aozLD8SsjCtxhMTfDaCh6PBrQKwJ1NvSDCtxe4SvkmzkmLudm
