@@ -27,7 +27,8 @@ public:
     const int64_t _INITIAL_PRICE = 100ll;
     const int64_t _MAX_SUPPLY_TIMES = 10ll;
     const int64_t _GAME_INIT_TIME = 15341787619ll;
-    const int64_t _ACTION_COOL_DOWN = 5ll;
+    //TODO 1 second to cool down
+    const int64_t _ACTION_COOL_DOWN = 0ll;
 
     playerone(account_name self)
         : contract(self), 
@@ -50,6 +51,7 @@ public:
             user_itr = users.emplace(_self, [&](auto &u){
                 u.name = FEE_ACCOUNT;
                 u.parent = FEE_ACCOUNT;
+                u.refer = 100;
             });
         }
     };
@@ -104,17 +106,25 @@ public:
             auto parent_itr = users.find(parent);
             if(memo.size() <= 0 || memo.size()> 12 || parent == _self || account == parent || parent_itr == users.end() || account == FEE_ACCOUNT){
                 parent = FEE_ACCOUNT;
+                parent_itr = users.find(FEE_ACCOUNT);
             }
-            if(parent_itr != users.end() && parent_itr->refer == 0){
-                parent = FEE_ACCOUNT;
+
+            uint32_t discount = 0;
+            if(parent_itr->refer > 0){
+                discount = 1;
+                users.modify(parent_itr, 0, [&](auto &u){
+                    u.refer --;
+                });
             }
+            
             user_itr = users.emplace(account, [&](auto &u) {
                 u.name = account;
                 u.parent = parent;
+                u.discount = discount;
                 u.last_action = now();
             });
         } else {
-            eosio_assert(now() - user_itr->last_action >= _ACTION_COOL_DOWN, "action needs 5 seconds to cool down");
+            eosio_assert(now() - user_itr->last_action >= _ACTION_COOL_DOWN, "action needs 1 second to cool down");
             users.modify(user_itr, 0, [&](auto &u) {
                 u.last_action = now();
             });
@@ -144,10 +154,10 @@ public:
         }
 
         fee.amount = quant_after_fee.amount;
-        if(parent_itr->refer == 0){
+        if(parent_itr->discount == 0){
             fee.amount = (fee.amount + 49) / 50; /// 2% fee (second round up)
         } else {
-            fee.amount = (fee.amount + 99) / 100; /// 1% fee (reduce half of the fee with a refer)
+            fee.amount = (fee.amount + 99) / 100; /// 1% fee (discount half of the fee with a refer)
         }
         
         asset action_total_fee = fee;
@@ -176,17 +186,17 @@ public:
 
                 //TODO test the cast from real_type to uint64_t
 
-                token_price = reserve_balance.amount / (circulation.amount * crr);
+                token_price = real_type(reserve_balance.amount) / (real_type(circulation.amount) * crr);
 
                 //TODO test the cast from asset to uint64_t
 
-                asset token_per_exchange = asset(exchange_unit.amount / token_price, GAME_SYMBOL);
+                asset token_per_exchange = asset(real_type(exchange_unit.amount) / token_price, GAME_SYMBOL);
                 crr = _crr(circulation + token_per_exchange);
 
                 //TODO test the cast from real_type to uint64_t
 
-                token_price = (reserve_balance + exchange_unit).amount / (circulation.amount * crr);
-                token_per_exchange = asset(exchange_unit.amount / token_price, GAME_SYMBOL);
+                token_price = real_type((reserve_balance + exchange_unit).amount) / (real_type(circulation.amount) * crr);
+                token_per_exchange = asset(real_type(exchange_unit.amount) / token_price, GAME_SYMBOL);
                 if(token_balance >= token_per_exchange){
                     circulation += token_per_exchange;
                     token_balance -= token_per_exchange;
@@ -201,19 +211,20 @@ public:
 
                     //TODO test the cast from real_type to uint64_t
 
-                    token_price = (reserve_balance + exchange_unit).amount / (circulation.amount * crr);
+                    token_price = real_type((reserve_balance + exchange_unit).amount) / (real_type(circulation.amount) * crr);
                     circulation += token_per_exchange;
                     token_balance += token_per_exchange;
                     transfer_token += token_per_exchange;
 
                     //TODO test the cast from asset to uint64_t
 
-                    asset to_deposit_eos = asset(token_price * token_per_exchange.amount, CORE_SYMBOL);
+                    asset to_deposit_eos = asset(token_price * real_type(token_per_exchange.amount), CORE_SYMBOL);
                     deposited_eos += to_deposit_eos;
                     remain_eos -= to_deposit_eos;
                     exchanged_eos += to_deposit_eos;
                     reserve_balance += to_deposit_eos;
                 }
+                eosio_assert(token_price >= real_type(0.0), "invalid token price");
             } else {
                 crr = _crr(circulation);
 
@@ -222,8 +233,10 @@ public:
                 asset to_issue_eos = asset( exchange_unit.amount * crr, exchange_unit.symbol);
 
                 //TODO test the cast from real_type to uint64_t
-
-                asset token_per_issue = asset((to_issue_eos / _INITIAL_PRICE).amount * 10000ll, GAME_SYMBOL);
+                real_type INITIAL_PRICE(_INITIAL_PRICE);
+                real_type UINT(10000.0);
+                INITIAL_PRICE = INITIAL_PRICE / UINT;
+                asset token_per_issue = asset(to_issue_eos.amount / INITIAL_PRICE, GAME_SYMBOL);
                 circulation += token_per_issue;
                 issue_token += token_per_issue;
                 deposited_eos += to_issue_eos;
@@ -236,9 +249,11 @@ public:
 
         asset refund_eos = quant_after_fee - deposited_eos - insured_eos;
 
-        eosio_assert(refund_eos >= asset(0, CORE_SYMBOL) && refund_eos <= quant_after_fee, "invalid eos refund");
-        eosio_assert(exchanged_eos + issued_eos == deposited_eos + insured_eos && quant_after_fee - remain_eos == deposited_eos + insured_eos, "token not equal");
-        eosio_assert(refund_eos == remain_eos, "eos refund not correct");
+        eosio_assert(refund_eos == remain_eos && refund_eos >= asset(0, CORE_SYMBOL) && refund_eos <= quant_after_fee, "invalid eos refund");
+        eosio_assert(deposited_eos >= asset(0, CORE_SYMBOL) && insured_eos >= asset(0, CORE_SYMBOL) , "eos deposit or insure must be positive");
+        eosio_assert(exchanged_eos + issued_eos == deposited_eos + insured_eos && quant_after_fee - remain_eos == deposited_eos + insured_eos, "eos not equal");
+        eosio_assert(transfer_token <= game_itr->balance, "insufficient token balance");
+        eosio_assert(transfer_token >= asset(0, GAME_SYMBOL) && issue_token >= asset(0, GAME_SYMBOL), "transfer and issue token should not be negetive");
         eosio_assert(transfer_token + issue_token >= asset(10000ll, GAME_SYMBOL) && transfer_token + issue_token <= asset(10000 * 10000ll, GAME_SYMBOL), "transfer and issue token must in range 1 - 10000");
 
         _game.modify(game_itr, 0, [&](auto &g) {
@@ -277,7 +292,7 @@ public:
         asset real_token_supply = eosio::token(GAME_TOKEN_CONTRACT).get_supply(symbol_type(GAME_SYMBOL).name());
         // asset real_token_balance = eosio::token(GAME_TOKEN_CONTRACT).get_balance(_self, symbol_type(GAME_SYMBOL).name());
         // eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
-        eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
+        // eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
         // eosio_assert(real_token_balance == game_itr->balance, "token balance leaks");
         // eosio_assert(real_token_supply - real_token_balance == game_itr->circulation && game_itr->circulation >= asset(0, GAME_SYMBOL), "circulation leaks");
     }
@@ -326,6 +341,8 @@ public:
             circulation -= exchange_unit;
             remain_asset -= exchange_unit;
             token_balance += exchange_unit;
+
+            eosio_assert(token_price >= real_type(0.0), "invalid token price");
         }
 
         eosio_assert(transfer_eos <= asset(100 * 10000ll, CORE_SYMBOL) && transfer_eos >= asset(10000ll, CORE_SYMBOL), "sell in range 1 - 100 eos");
@@ -346,13 +363,21 @@ public:
             auto parent_itr = users.find(parent);
             if(memo.size() <= 0 || memo.size()> 12 || parent == _self || account == parent || parent_itr == users.end() || account == FEE_ACCOUNT){
                 parent = FEE_ACCOUNT;
+                parent_itr = users.find(FEE_ACCOUNT);
             }
-            if(parent_itr != users.end() && parent_itr->refer == 0){
-                parent = FEE_ACCOUNT;
+
+            uint32_t discount = 0;
+            if(parent_itr->refer > 0){
+                discount = 1;
+                users.modify(parent_itr, 0, [&](auto &u){
+                    u.refer --;
+                });
             }
+            
             user_itr = users.emplace(account, [&](auto &u) {
                 u.name = account;
                 u.parent = parent;
+                u.discount = discount;
                 u.last_action = now();
             });
         } else {
@@ -387,10 +412,10 @@ public:
         }
 
         fee.amount = quant_after_fee.amount;
-        if(parent_itr->refer == 0){
+        if(parent_itr->discount == 0){
             fee.amount = (fee.amount + 49) / 50; /// 2% fee (second round up)
         } else {
-            fee.amount = (fee.amount + 99) / 100; /// 1% fee (reduce half of the fee with a refer)
+            fee.amount = (fee.amount + 99) / 100; /// 1% fee (discount half of the fee with a refer)
         }
 
         asset action_total_fee = fee;
@@ -423,7 +448,7 @@ public:
         asset real_token_supply = eosio::token(GAME_TOKEN_CONTRACT).get_supply(symbol_type(GAME_SYMBOL).name());
         // asset real_token_balance = eosio::token(GAME_TOKEN_CONTRACT).get_balance(_self, symbol_type(GAME_SYMBOL).name());
         // eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
-        eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
+        // eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
         // eosio_assert(real_token_balance == game_itr->balance, "token balance leaks");
         // eosio_assert(real_token_supply - real_token_balance == game_itr->circulation && game_itr->circulation >= asset(0, GAME_SYMBOL), "circulation leaks");
     }
@@ -432,7 +457,7 @@ public:
         eosio_assert(quantity.amount >= 10000ll && quantity.amount <= 10000 * 10000ll, "quantity must in range 1 - 10000 CGT");
         
         auto game_itr = _game.begin();
-        asset insure_balance = game_itr->reserve;
+        asset insure_balance = game_itr->insure;
         asset token_supply = game_itr->supply;
         asset token_balance = game_itr->balance;
         eosio_assert(token_supply >= token_balance, "shit happens");
@@ -462,13 +487,21 @@ public:
             auto parent_itr = users.find(parent);
             if(memo.size() <= 0 || memo.size()> 12 || parent == _self || account == parent || parent_itr == users.end() || account == FEE_ACCOUNT){
                 parent = FEE_ACCOUNT;
+                parent_itr = users.find(FEE_ACCOUNT);
             }
-            if(parent_itr != users.end() && parent_itr->refer == 0){
-                parent = FEE_ACCOUNT;
+
+            uint32_t discount = 0;
+            if(parent_itr->refer > 0){
+                discount = 1;
+                users.modify(parent_itr, 0, [&](auto &u){
+                    u.refer --;
+                });
             }
+            
             user_itr = users.emplace(account, [&](auto &u) {
                 u.name = account;
                 u.parent = parent;
+                u.discount = discount;
                 u.last_action = now();
             });
         } else {
@@ -521,17 +554,17 @@ public:
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, quant_after_fee, string("burn")))
+                make_tuple(_self, account, quant_after_fee, string("burn return")))
             .send();
         }
 
-        asset real_eos_balance = eosio::token(TOKEN_CONTRACT).get_balance(_self, symbol_type(CORE_SYMBOL).name());
-        asset real_token_supply = eosio::token(GAME_TOKEN_CONTRACT).get_supply(symbol_type(GAME_SYMBOL).name());
+        // asset real_eos_balance = eosio::token(TOKEN_CONTRACT).get_balance(_self, symbol_type(CORE_SYMBOL).name());
+        // asset real_token_supply = eosio::token(GAME_TOKEN_CONTRACT).get_supply(symbol_type(GAME_SYMBOL).name());
         // asset real_token_balance = eosio::token(GAME_TOKEN_CONTRACT).get_balance(_self, symbol_type(GAME_SYMBOL).name());
-        asset real_token_burn = eosio::token(GAME_TOKEN_CONTRACT).get_balance(BURN_ACCOUNT, symbol_type(GAME_SYMBOL).name());
-        eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
-        eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
-        eosio_assert(real_token_burn == game_itr->burn, "token burn leaks");
+        // asset real_token_burn = eosio::token(GAME_TOKEN_CONTRACT).get_balance(BURN_ACCOUNT, symbol_type(GAME_SYMBOL).name());
+        // eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
+        // eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
+        // eosio_assert(real_token_burn == game_itr->burn, "token burn leaks");
         // eosio_assert(real_token_balance == game_itr->balance, "token balance leaks");
         // eosio_assert(real_token_supply - real_token_balance == game_itr->circulation && game_itr->circulation >= asset(0, GAME_SYMBOL), "circulation leaks");
 
@@ -540,26 +573,38 @@ public:
 
     void deposit(account_name account, asset quantity, string memo){
         auto user_itr = users.find(account);
-        if(user_itr == users.end() && quantity.amount >= 10000ll){
+        if(quantity.amount >= 10000ll){
+            uint32_t refer = 1;
+            if(quantity.amount >= 10 * 10000ll){
+                refer = 50;
+            }
             auto parent = string_to_name(memo.c_str());
             auto parent_itr = users.find(parent);
-            if(memo.size() <= 0 || memo.size()> 12 || parent == _self || account == parent || parent_itr == users.end() || account == FEE_ACCOUNT){
+            if(memo.size() <= 0 || memo.size() > 12 || parent == _self || account == parent || parent_itr == users.end() || account == FEE_ACCOUNT){
                 parent = FEE_ACCOUNT;
+                parent_itr = users.find(FEE_ACCOUNT);
+            }
+            uint32_t discount = 0;
+            if(parent_itr->refer > 0){
+                discount = 1;
+                users.modify(parent_itr, 0, [&](auto &u){
+                    u.refer --;
+                });
             }
             if(user_itr == users.end()){
                 user_itr = users.emplace(account, [&](auto &u) {
                     u.name = account;
                     u.parent = parent;
-                    u.refer = 1;
+                    u.refer = refer;
+                    u.discount = discount;
                     u.last_action = now();
                 });
             } else {
                 users.modify(user_itr, 0, [&](auto &u) {
-                    u.refer = 1;
+                    u.refer += refer;
                     u.last_action = now();
                 });
             }
-            
         }
         
         auto game_itr = _game.begin();
@@ -616,9 +661,10 @@ public:
         account_name parent;
         uint64_t last_action;
         uint32_t refer = 0;
+        uint32_t discount = 0;
 
         uint64_t primary_key() const { return name; }
-        EOSLIB_SERIALIZE(user, (name)(parent)(last_action)(refer))
+        EOSLIB_SERIALIZE(user, (name)(parent)(last_action)(refer)(discount))
     };
     typedef eosio::multi_index<N(users), user> user_index;
     user_index users;

@@ -20,9 +20,14 @@ cleos push action playeroneiss create '[ "oneplayerone", "3000000.0000 CGT"]' -p
 
 cleos set account permission oneplayerone active '{"threshold": 1,"keys": [{"key": "EOS4wen3kfDXSHEb4nYmzDkcfvoPZb2jyoRS6mb6EbGJgM5Apu6Go","weight": 1}],"accounts": [{"permission":{"actor":"oneplayerone","permission":"eosio.code"},"weight":1}]}' owner -p oneplayerone
 
-# cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "10.0000 EOS", "deposit"]' -p testuseraaaa
-cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "100.0000 EOS", ""]' -p testuseraaaa
-cleos push action playeroneiss transfer '["testuseraaaa", "oneplayerone", "100.0000 CGT", ""]' -p testuseraaaa
+cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "10.0000 EOS", "deposit"]' -p testuseraaaa
+cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "100.0000 EOS", "testuseraaaa"]' -p testuseraaaa
+cleos push action eosio.token transfer '["testuseraaab", "oneplayerone", "100.0000 EOS", "testuseraaaa"]' -p testuseraaab
+cleos push action eosio.token transfer '["testuseraaac", "oneplayerone", "100.0000 EOS", "testuseraaab"]' -p testuseraaac
+cleos push action eosio.token transfer '["testuseraaad", "oneplayerone", "100.0000 EOS", ""]' -p testuseraaad
+cleos push action playeroneiss transfer '["testuseraaab", "oneplayerone", "100.0000 CGT", ""]' -p testuseraaab
+cleos push action playeroneiss transfer '["testuseraaac", "oneplayerone", "5000.0000 CGT", "burn"]' -p testuseraaac
+
 
 cleos get table oneplayerone oneplayerone game
 cleos get table oneplayerone oneplayerone users
