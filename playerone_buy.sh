@@ -1,6 +1,6 @@
 #! /bin/bash
 
-# cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "10.0000 EOS", "deposit"]' -p testuseraaaa
+cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "3.0000 EOS", "deposit"]' -p testuseraaaa
 
 for ((i=0; i<1; ++i)) 
 do  

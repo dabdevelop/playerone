@@ -47,6 +47,7 @@ public:
                 g.gameid = _self;
                 g.max_supply = asset(_L * _MAX_SUPPLY_TIMES * _UNIT, GAME_SYMBOL);
                 g.start_time = _GAME_INIT_TIME;
+                g.next_refer = FEE_ACCOUNT;
             });
         }
 
@@ -192,7 +193,7 @@ public:
             if(exchange_unit > remain_eos){
                 exchange_unit = remain_eos;
             }
-            if(circulation > asset(10000 * _UNIT, GAME_SYMBOL) && token_balance > asset(0, GAME_SYMBOL)){
+            if(circulation > asset(100000 * _UNIT, GAME_SYMBOL) && token_balance > asset(0, GAME_SYMBOL)){
                 crr = _crr(circulation);
 
                 //TODO test the cast from uint64_t to real_type
@@ -563,21 +564,19 @@ public:
                     if(refer_user_itr != users.end()){
                         parent = refer_user_itr->name;
                         parent_itr = users.find(refer_user_itr->name);
-                        const auto& refer_obj = *refer_itr;
-                        ++refer_itr;
                         if(refer_user_itr->refer <= 1){
-                            refers.erase(refer_obj);
+                            refer_itr = refers.erase(refer_itr);
+                        } else {
+                            refer_itr ++;
                         }
-                        if(refer_itr == refers.end()){
-                            if(refers.begin() == refers.end()){
-                                _game.modify(game_itr, 0, [&](auto& g){
-                                    g.next_refer = BURN_ACCOUNT;
-                                });
-                            } else {
-                                _game.modify(game_itr, 0, [&](auto& g){
-                                    g.next_refer = refers.begin()->name;
-                                });
-                            }
+                        if(refers.begin() == refers.end()){
+                            _game.modify(game_itr, 0, [&](auto& g){
+                                g.next_refer = BURN_ACCOUNT;
+                            });
+                        } else if(refer_itr == refers.end()) {
+                            _game.modify(game_itr, 0, [&](auto& g){
+                                g.next_refer = refers.begin()->name;
+                            });
                         } else {
                             _game.modify(game_itr, 0, [&](auto& g){
                                 g.next_refer = refer_itr->name;
