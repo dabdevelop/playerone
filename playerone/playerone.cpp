@@ -30,7 +30,8 @@ public:
     const int64_t _GAME_INIT_TIME = 0ll;
     //TODO 1 second to cool down
     const int64_t _ACTION_COOL_DOWN = 0ll;
-    const int64_t _REFER_PRICE = 10000ll;
+    const int64_t _UNIT = 10000ll;
+    const int64_t _REFER_PRICE = _UNIT;
 
     playerone(account_name self)
         : contract(self), 
@@ -44,7 +45,7 @@ public:
         {
             game_itr = _game.emplace(_self, [&](auto &g){
                 g.gameid = _self;
-                g.max_supply = asset(_L * _MAX_SUPPLY_TIMES * 10000ll, GAME_SYMBOL);
+                g.max_supply = asset(_L * _MAX_SUPPLY_TIMES * _UNIT, GAME_SYMBOL);
                 g.start_time = _GAME_INIT_TIME;
             });
         }
@@ -54,7 +55,7 @@ public:
             user_itr = users.emplace(_self, [&](auto &u){
                 u.name = FEE_ACCOUNT;
                 u.parent = FEE_ACCOUNT;
-                u.refer = 3;
+                u.refer = 500;
                 u.discount = 1;
             });
         }
@@ -66,7 +67,30 @@ public:
         }
     };
 
-    /// @abi action 
+    void eosio_token_transfer(account_name from, account_name to, asset quantity, string memo){
+        require_auth(from);
+        if (from == _self || to != _self) {
+            return;
+        }
+        eosio_assert(quantity.is_valid(), "invalid token transfer");
+        eosio_assert(quantity.amount > 0, "quantity must be positive");
+        eosio_assert(quantity.symbol == CORE_SYMBOL, "unexpected asset symbol input");
+
+        transfer(from, to, quantity, memo);
+    };
+
+    void game_token_transfer(account_name from, account_name to, asset quantity, string memo){
+        require_auth(from);
+        if (from == _self || to != _self) {
+            return;
+        }
+        eosio_assert(quantity.is_valid(), "invalid token transfer");
+        eosio_assert(quantity.amount > 0, "quantity must be positive");
+        eosio_assert(quantity.symbol == GAME_SYMBOL, "unexpected asset symbol input");
+
+        transfer(from, to, quantity, memo);
+    };
+
     void transfer(account_name from, account_name to, asset quantity, string memo){
         require_auth(from);
         if (from == _self || to != _self) {
@@ -76,7 +100,6 @@ public:
         eosio_assert(quantity.amount > 0, "quantity must be positive");
 
         if(quantity.symbol == CORE_SYMBOL){
-            eosio_assert(quantity.symbol == CORE_SYMBOL, "unexpected asset symbol input");
             if(memo == "deposit"){
                 deposit(from, quantity, memo);
             } else {
@@ -84,7 +107,6 @@ public:
                 buy(from, quantity, memo);
             }
         } else if(quantity.symbol == GAME_SYMBOL) {
-            eosio_assert(quantity.symbol == GAME_SYMBOL, "unexpected asset symbol input");
             if(memo == "burn"){
                 burn(from, quantity, memo);
             } else {
@@ -96,9 +118,9 @@ public:
     };
 
     void buy(account_name account, asset quantity, string memo){
-        eosio_assert(quantity.amount >= 10000ll && quantity.amount <= 100 * 10000ll, "quantity must in range 1 - 100 EOS");
+        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 100 * _UNIT, "quantity must in range 1 - 100 EOS");
 
-        asset exchange_unit = asset(10 * 10000ll, CORE_SYMBOL);
+        asset exchange_unit = asset(10 * _UNIT, CORE_SYMBOL);
         int64_t times = (quantity / exchange_unit) + 1;
         asset deposited_eos = asset(0, CORE_SYMBOL);
         asset insured_eos = asset(0, CORE_SYMBOL);
@@ -153,7 +175,7 @@ public:
             if(exchange_unit > remain_eos){
                 exchange_unit = remain_eos;
             }
-            if(circulation > asset(10000 * 10000ll, GAME_SYMBOL) && token_balance > asset(0, GAME_SYMBOL)){
+            if(circulation > asset(10000 * _UNIT, GAME_SYMBOL) && token_balance > asset(0, GAME_SYMBOL)){
                 crr = _crr(circulation);
 
                 //TODO test the cast from uint64_t to real_type
@@ -227,7 +249,7 @@ public:
         eosio_assert(deposited_eos >= asset(0, CORE_SYMBOL) && insured_eos >= asset(0, CORE_SYMBOL), "eos deposit or insure must be positive");
         eosio_assert(transfer_token >= asset(0, GAME_SYMBOL) && issue_token >= asset(0, GAME_SYMBOL), "transfer and issue token should not be negetive");
         eosio_assert(exchanged_eos + issued_eos == deposited_eos + insured_eos && quant_after_fee - remain_eos == deposited_eos + insured_eos, "eos not equal");
-        eosio_assert(transfer_token + issue_token >= asset(10000ll, GAME_SYMBOL) && transfer_token + issue_token <= asset(10000 * 10000ll, GAME_SYMBOL), "transfer and issue token must in range 1 - 10000");
+        eosio_assert(transfer_token + issue_token >= asset(_UNIT, GAME_SYMBOL) && transfer_token + issue_token <= asset(10000 * _UNIT, GAME_SYMBOL), "transfer and issue token must in range 1 - 10000");
 
         _game.modify(game_itr, 0, [&](auto &g) {
             g.reserve += deposited_eos;
@@ -270,8 +292,8 @@ public:
     }
 
     void sell(account_name account, asset quantity, string memo){
-        eosio_assert(quantity.amount >= 10000ll && quantity.amount <= 5000 * 10000ll, "quantity must in range 1 - 5000 CGT");
-        asset exchange_unit = asset(1000 * 10000ll, GAME_SYMBOL);
+        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 5000 * _UNIT, "quantity must in range 1 - 5000 CGT");
+        asset exchange_unit = asset(1000 * _UNIT, GAME_SYMBOL);
         asset remain_asset = quantity;
         int64_t times = (quantity / exchange_unit) + 1;
         asset transfer_eos = asset(0, CORE_SYMBOL);
@@ -317,7 +339,7 @@ public:
             eosio_assert(token_price >= real_type(0.0), "invalid token price");
         }
 
-        eosio_assert(transfer_eos <= asset(100 * 10000ll, CORE_SYMBOL) && transfer_eos >= asset(10000ll, CORE_SYMBOL), "sell in range 1 - 100 eos");
+        eosio_assert(transfer_eos <= asset(100 * _UNIT, CORE_SYMBOL) && transfer_eos >= asset(_UNIT, CORE_SYMBOL), "sell in range 1 - 100 eos");
         eosio_assert(remain_asset >= asset(0, GAME_SYMBOL) && quantity >= remain_asset, "remain asset is invalid");
         eosio_assert(quantity - remain_asset == token_balance - game_itr->balance, "exchange asset is not equal");
         eosio_assert(game_itr->reserve >= transfer_eos, "insufficient reserve eos");
@@ -385,7 +407,7 @@ public:
     }
 
     void burn(account_name account, asset quantity, string memo){
-        eosio_assert(quantity.amount >= 10000ll && quantity.amount <= 10000 * 10000ll, "quantity must in range 1 - 10000 CGT");
+        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 10000 * _UNIT, "quantity must in range 1 - 10000 CGT");
         
         auto game_itr = _game.begin();
         asset insure_balance = game_itr->insure;
@@ -402,7 +424,7 @@ public:
 
         asset transfer_eos = asset(token_price * real_type(quantity.amount), CORE_SYMBOL);
 
-        eosio_assert(transfer_eos <= asset(100 * 10000ll, CORE_SYMBOL) && transfer_eos >= asset(10000ll, CORE_SYMBOL), "burn in range 1 - 100 eos");
+        eosio_assert(transfer_eos <= asset(100 * _UNIT, CORE_SYMBOL) && transfer_eos >= asset(_UNIT, CORE_SYMBOL), "burn in range 1 - 100 eos");
         eosio_assert(insure_balance >= transfer_eos, "insufficient insure eos");
 
         auto user_itr = users.find(account);
@@ -650,13 +672,22 @@ public:
 extern "C" { \
     void apply( uint64_t receiver, uint64_t code, uint64_t action ) { \
         auto self = receiver; \
-        if( action == N(onerror)) { \
+        if(action == N(onerror)) { \
             /* onerror is only valid if it is for the "eosio" code account and authorized by "eosio"'s "active permission */ \
             eosio_assert(code == N(eosio), "onerror action's are only valid from the \"eosio\" system account"); \
         } \
-        if((code == TOKEN_CONTRACT && action == N(transfer)) || (code == GAME_TOKEN_CONTRACT && action == N(transfer))) { \
+        if(action == N(transfer)) { \
+            auto _action = N(onerror); \
+            if(code == TOKEN_CONTRACT) { \
+                _action = N(eosio_token_transfer); \
+            } else if(code == GAME_TOKEN_CONTRACT) { \
+                _action = N(game_token_transfer); \
+            } \
+            if(_action == N(onerror)) { \
+                eosio_assert(false, "this token contract is denied"); \
+            } \
             TYPE thiscontract( self ); \
-            switch( action ) { \
+            switch( _action ) { \
                 EOSIO_API( TYPE, MEMBERS ) \
             } \
          /* does not allow destructor of thiscontract to run: eosio_exit(0); */ \
@@ -664,4 +695,4 @@ extern "C" { \
     } \
 } \
 
-EOSIO_ABI_EX(playerone, (transfer))
+EOSIO_ABI_EX(playerone, (eosio_token_transfer)(game_token_transfer))

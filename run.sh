@@ -6,5 +6,5 @@
 ./build.sh
 ./eos_init.sh
 ./playerone_init.sh
-./playerone_buy.sh
-# ./playerone.sh
+# ./playerone_buy.sh
+./playerone.sh
