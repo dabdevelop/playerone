@@ -30,6 +30,7 @@ public:
     const int64_t _GAME_INIT_TIME = 0ll;
     //TODO 1 second to cool down
     const int64_t _ACTION_COOL_DOWN = 0ll;
+    const int64_t _REFER_PRICE = 10000ll;
 
     playerone(account_name self)
         : contract(self), 
@@ -53,7 +54,7 @@ public:
             user_itr = users.emplace(_self, [&](auto &u){
                 u.name = FEE_ACCOUNT;
                 u.parent = FEE_ACCOUNT;
-                u.refer = 200;
+                u.refer = 3;
                 u.discount = 1;
             });
         }
@@ -457,10 +458,10 @@ public:
     void deposit(account_name account, asset quantity, string memo){
         auto game_itr = _game.begin();
         auto user_itr = users.find(account);
-        if(quantity.amount >= 10000ll){
-            uint32_t refer = 1;
-            if(quantity.amount >= 10 * 10000ll){
-                refer = 20;
+        if(quantity.amount >= _REFER_PRICE / 2){
+            uint32_t refer = 0;
+            if(quantity.amount >= _REFER_PRICE){
+                refer = quantity.amount / _REFER_PRICE;
             }
             if(user_itr == users.end()){
                 new_user(account, memo);
@@ -477,7 +478,6 @@ public:
                 refer_itr = refers.emplace(account, [&](auto &r){
                     r.name = account;
                 });
-
                 _game.modify(game_itr, 0, [&](auto& g){
                     g.next_refer = account;
                 });
@@ -496,6 +496,9 @@ public:
     }
 
     void new_user(account_name account, string memo){
+        auto user_itr = users.find(account);
+        if(user_itr != users.end()) return;
+
         uint32_t discount = 0;
         auto parent = string_to_name(memo.c_str());
         auto parent_itr = users.find(parent);
@@ -512,7 +515,7 @@ public:
                         parent_itr = users.find(refer_user_itr->name);
                         const auto& obj = *refer_itr;
                         ++refer_itr;
-                        if(refer_user_itr->refer <= 1){
+                        if(refer_user_itr->refer <= 1 && refer_user_itr->name != FEE_ACCOUNT){
                             refers.erase(obj);
                         }
                         if(refer_itr == refers.end()){
@@ -542,7 +545,7 @@ public:
             });
         }
         
-        auto user_itr = users.emplace(account, [&](auto &u) {
+        users.emplace(account, [&](auto &u) {
             u.name = account;
             u.parent = parent;
             u.discount = discount;
@@ -551,12 +554,15 @@ public:
     }
 
     void send_fee(account_name account, asset fee){
-        auto user_itr = users.find(account);
-        auto parent_itr = users.find(user_itr->parent);
         if (fee.amount > 0){
             auto refer_fee = fee;
             refer_fee = fee / 2;
             fee -= refer_fee;
+
+            auto user_itr = users.find(account);
+            if(user_itr == users.end()) return;
+            auto parent_itr = users.find(user_itr->parent);
+            if(parent_itr == users.end()) return;
 
             action(
                 permission_level{_self, N(active)},
@@ -566,10 +572,12 @@ public:
 
             if (refer_fee.amount > 0)
             {
+                parent_itr = users.find(parent_itr->parent);
+                if(parent_itr == users.end()) return;
                 action(
                     permission_level{_self, N(active)},
                     TOKEN_CONTRACT, N(transfer),
-                    make_tuple(_self, parent_itr->parent, refer_fee, string("refer fee")))
+                    make_tuple(_self, parent_itr->name, refer_fee, string("refer fee")))
                 .send();
             }
         }
