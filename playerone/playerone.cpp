@@ -684,7 +684,7 @@ extern "C" { \
                 _action = N(game_token_transfer); \
             } \
             if(_action == N(onerror)) { \
-                eosio_assert(false, "this token contract is denied"); \
+                eosio_assert(false, "action from this code is denied"); \
             } \
             TYPE thiscontract( self ); \
             switch( _action ) { \
