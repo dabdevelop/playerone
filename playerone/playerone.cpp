@@ -164,7 +164,6 @@ public:
         asset reserve_balance = game_itr->reserve;
         asset token_supply = game_itr->supply;
         asset token_balance = game_itr->balance;
-        eosio_assert(token_supply >= token_balance, "shit happens");
         asset circulation = token_supply - token_balance;
         real_type crr;
         real_type token_price;
@@ -301,7 +300,6 @@ public:
         asset reserve_balance = game_itr->reserve;
         asset token_supply = game_itr->supply;
         asset token_balance = game_itr->balance;
-        eosio_assert(token_supply >= token_balance, "shit happens");
         asset circulation = token_supply - token_balance;
         real_type crr;
         real_type token_price;
@@ -413,7 +411,6 @@ public:
         asset insure_balance = game_itr->insure;
         asset token_supply = game_itr->supply;
         asset token_balance = game_itr->balance;
-        eosio_assert(token_supply >= token_balance, "shit happens");
         asset circulation = token_supply - token_balance;
 
         //TODO test the cast from uint64_t to real_type
@@ -509,7 +506,8 @@ public:
                         r.name = FEE_ACCOUNT;
                     });
                 }
-                if(game_itr->next_refer == BURN_ACCOUNT){
+                auto next_refer_itr = users.find(game_itr->next_refer);
+                if(next_refer_itr == users.end()){
                     _game.modify(game_itr, 0, [&](auto& g){
                         g.next_refer = account;
                     });
@@ -539,7 +537,8 @@ public:
         if(parent_itr == users.end() || parent_itr->refer <= 0 || account == parent){
             parent = FEE_ACCOUNT;
             parent_itr = users.find(FEE_ACCOUNT);
-            if(refers.begin() != refers.end() && game_itr->next_refer != BURN_ACCOUNT){
+            auto next_refer_itr = users.find(game_itr->next_refer);
+            if(refers.begin() != refers.end() && next_refer_itr != users.end()){
                 auto refer_itr = refers.find(game_itr->next_refer);
                 if(refer_itr != refers.end()){
                     auto refer_user_itr = users.find(refer_itr->name);
@@ -548,7 +547,7 @@ public:
                         parent_itr = users.find(refer_user_itr->name);
                         const auto& refer_obj = *refer_itr;
                         ++refer_itr;
-                        if(refer_user_itr->refer <= 1 && refer_user_itr->name != FEE_ACCOUNT){
+                        if(refer_user_itr->refer <= 1){
                             refers.erase(refer_obj);
                         }
                         if(refer_itr == refers.end()){
