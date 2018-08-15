@@ -513,10 +513,10 @@ public:
                     if(refer_user_itr != users.end()){
                         parent = refer_user_itr->name;
                         parent_itr = users.find(refer_user_itr->name);
-                        const auto& obj = *refer_itr;
+                        const auto& refer_obj = *refer_itr;
                         ++refer_itr;
                         if(refer_user_itr->refer <= 1 && refer_user_itr->name != FEE_ACCOUNT){
-                            refers.erase(obj);
+                            refers.erase(refer_obj);
                         }
                         if(refer_itr == refers.end()){
                             if(refers.begin() == refers.end()){
