@@ -34,7 +34,8 @@ public:
     playerone(account_name self)
         : contract(self), 
         _game(_self, _self),
-        users(_self, _self)
+        users(_self, _self),
+        refers(_self, _self)
     {
         // Create a new game if not exists
         auto game_itr = _game.begin();
@@ -52,7 +53,14 @@ public:
             user_itr = users.emplace(_self, [&](auto &u){
                 u.name = FEE_ACCOUNT;
                 u.parent = FEE_ACCOUNT;
-                u.refer = 100;
+                u.refer = 3;
+                u.discount = 1;
+            });
+        }
+        auto refer_itr = refers.find(FEE_ACCOUNT);
+        if(refer_itr == refers.end() && user_itr->refer > 0){
+            refer_itr = refers.emplace(_self, [&](auto &r){
+                r.name = FEE_ACCOUNT;
             });
         }
     };
@@ -103,21 +111,52 @@ public:
 
         auto user_itr = users.find(account);
         if(user_itr == users.end()){
+            uint32_t discount = 0;
             auto parent = string_to_name(memo.c_str());
             auto parent_itr = users.find(parent);
-            if(memo.size() <= 0 || memo.size()> 12 || parent == _self || account == parent || parent_itr == users.end() || account == FEE_ACCOUNT){
+            auto game_itr = _game.begin();
+            if(parent_itr == users.end() || parent_itr->refer <= 0 || account == parent){
                 parent = FEE_ACCOUNT;
                 parent_itr = users.find(FEE_ACCOUNT);
+                if(refers.begin() != refers.end() && game_itr->next_refer != BURN_ACCOUNT){
+                    auto refer_itr = refers.find(game_itr->next_refer);
+                    if(refer_itr != refers.end()){
+                        auto refer_user_itr = users.find(refer_itr->name);
+                        if(refer_user_itr != users.end()){
+                            parent = refer_user_itr->name;
+                            parent_itr = users.find(refer_user_itr->name);
+                            const auto& obj = *refer_itr;
+                            ++refer_itr;
+                            if(refer_user_itr->refer <= 1){
+                                refers.erase(obj);
+                            }
+                            if(refer_itr == refers.end()){
+                                if(refers.begin() == refers.end()){
+                                    _game.modify(game_itr, 0, [&](auto& g){
+                                        g.next_refer = BURN_ACCOUNT;
+                                    });
+                                } else {
+                                    _game.modify(game_itr, 0, [&](auto& g){
+                                        g.next_refer = refers.begin()->name;
+                                    });
+                                }
+                            } else {
+                                _game.modify(game_itr, 0, [&](auto& g){
+                                    g.next_refer = refer_itr->name;
+                                });
+                            }
+                        }
+                    }
+                }
             }
 
-            uint32_t discount = 0;
-            if(parent_itr->refer > 0){
+            if(parent_itr != users.end() && parent_itr->refer > 0){
                 discount = 1;
                 users.modify(parent_itr, 0, [&](auto &u){
                     u.refer --;
                 });
             }
-            
+
             user_itr = users.emplace(account, [&](auto &u) {
                 u.name = account;
                 u.parent = parent;
@@ -569,11 +608,12 @@ public:
     }
 
     void deposit(account_name account, asset quantity, string memo){
+        auto game_itr = _game.begin();
         auto user_itr = users.find(account);
         if(quantity.amount >= 10000ll){
             uint32_t refer = 1;
             if(quantity.amount >= 10 * 10000ll){
-                refer = 50;
+                refer = 3;
             }
             auto parent = string_to_name(memo.c_str());
             auto parent_itr = users.find(parent);
@@ -602,10 +642,19 @@ public:
                     u.last_action = now();
                 });
             }
+
+            auto refer_itr = refers.find(account);
+            if(refer_itr == refers.end() && user_itr->refer > 0){
+                refer_itr = refers.emplace(account, [&](auto &r){
+                    r.name = account;
+                });
+
+                _game.modify(game_itr, 0, [&](auto& g){
+                    g.next_refer = account;
+                });
+            }
         }
         
-        auto game_itr = _game.begin();
-
         _game.modify(game_itr, 0, [&](auto &g) {
             g.insure += quantity;
         });
@@ -648,9 +697,10 @@ public:
         asset circulation = asset(0, GAME_SYMBOL);
         asset burn = asset(0, GAME_SYMBOL);
         uint64_t start_time;
+        account_name next_refer;
 
         uint64_t primary_key() const { return gameid; }
-        EOSLIB_SERIALIZE(game, (gameid)(reserve)(insure)(max_supply)(supply)(balance)(circulation)(burn)(start_time))
+        EOSLIB_SERIALIZE(game, (gameid)(reserve)(insure)(max_supply)(supply)(balance)(circulation)(burn)(start_time)(next_refer))
     };
     typedef eosio::multi_index<N(game), game> game_index;
     game_index _game;
@@ -669,6 +719,14 @@ public:
     typedef eosio::multi_index<N(users), user> user_index;
     user_index users;
 
+    // @abi table refers i64
+    struct refer{
+        account_name name;
+        uint64_t primary_key() const { return name; }
+        EOSLIB_SERIALIZE(refer, (name))
+    };
+    typedef eosio::multi_index<N(refers), refer> refer_index;
+    refer_index refers;
 };
 
 #define EOSIO_ABI_EX( TYPE, MEMBERS ) \

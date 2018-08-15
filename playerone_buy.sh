@@ -1,16 +1,18 @@
 #! /bin/bash
 
-for ((i=0; i<100; ++i)) 
+cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "10.0000 EOS", "deposit"]' -p testuseraaaa
+
+for ((i=0; i<1; ++i)) 
 do  
     cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "99.9999 EOS", "testuseraaaa"]' -p testuseraaaa
     cleos push action eosio.token transfer '["testuseraaab", "oneplayerone", "99.9999 EOS", "testuseraaaa"]' -p testuseraaab
     cleos push action eosio.token transfer '["testuseraaac", "oneplayerone", "99.9999 EOS", "testuseraaab"]' -p testuseraaac
     cleos push action eosio.token transfer '["testuseraaad", "oneplayerone", "99.9999 EOS", ""]' -p testuseraaad
-    cleos push action eosio.token transfer '["testuseraaae", "oneplayerone", "99.9999 EOS", "testuseraaaa"]' -p testuseraaae
-    cleos push action eosio.token transfer '["testuseraaaf", "oneplayerone", "99.9999 EOS", "testuseraaaa"]' -p testuseraaaf
-    cleos push action eosio.token transfer '["testuseraaag", "oneplayerone", "99.9999 EOS", "testuseraaab"]' -p testuseraaag
+    cleos push action eosio.token transfer '["testuseraaae", "oneplayerone", "99.9999 EOS", ""]' -p testuseraaae
+    cleos push action eosio.token transfer '["testuseraaaf", "oneplayerone", "99.9999 EOS", ""]' -p testuseraaaf
+    cleos push action eosio.token transfer '["testuseraaag", "oneplayerone", "99.9999 EOS", ""]' -p testuseraaag
     cleos push action eosio.token transfer '["testuseraaah", "oneplayerone", "99.9999 EOS", ""]' -p testuseraaah
-    cleos push action eosio.token transfer '["testuseraaai", "oneplayerone", "99.9999 EOS", "testuseraaab"]' -p testuseraaai
+    cleos push action eosio.token transfer '["testuseraaai", "oneplayerone", "99.9999 EOS", ""]' -p testuseraaai
     cleos push action eosio.token transfer '["testuseraaaj", "oneplayerone", "99.9999 EOS", ""]' -p testuseraaaj
 
     cleos push action playeroneiss transfer '["testuseraaaa", "oneplayerone", "11.1111 CGT", ""]' -p testuseraaaa
@@ -28,3 +30,4 @@ done
 
 cleos get table oneplayerone oneplayerone game
 cleos get table oneplayerone oneplayerone users
+cleos get table oneplayerone oneplayerone refers
