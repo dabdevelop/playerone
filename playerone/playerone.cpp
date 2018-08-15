@@ -43,7 +43,7 @@ public:
         auto game_itr = _game.begin();
         if (game_itr == _game.end())
         {
-            game_itr = _game.emplace(_self, [&](auto &g){
+            game_itr = _game.emplace(_self, [&](auto& g){
                 g.gameid = _self;
                 g.max_supply = asset(_L * _MAX_SUPPLY_TIMES * _UNIT, GAME_SYMBOL);
                 g.start_time = _GAME_INIT_TIME;
@@ -52,16 +52,16 @@ public:
 
         auto user_itr = users.find(FEE_ACCOUNT);
         if(user_itr == users.end()){
-            user_itr = users.emplace(_self, [&](auto &u){
+            user_itr = users.emplace(_self, [&](auto& u){
                 u.name = FEE_ACCOUNT;
                 u.parent = FEE_ACCOUNT;
-                u.refer = 500;
+                u.refer = 100;
                 u.discount = 1;
             });
         }
         auto refer_itr = refers.find(FEE_ACCOUNT);
         if(refer_itr == refers.end() && user_itr->refer > 0){
-            refer_itr = refers.emplace(_self, [&](auto &r){
+            refer_itr = refers.emplace(_self, [&](auto& r){
                 r.name = FEE_ACCOUNT;
             });
         }
@@ -134,7 +134,7 @@ public:
             user_itr = users.find(account);
         } else {
             eosio_assert(now() - user_itr->last_action >= _ACTION_COOL_DOWN, "action needs 1 second to cool down");
-            users.modify(user_itr, 0, [&](auto &u) {
+            users.modify(user_itr, 0, [&](auto& u) {
                 u.last_action = now();
             });
         }
@@ -251,7 +251,7 @@ public:
         eosio_assert(exchanged_eos + issued_eos == deposited_eos + insured_eos && quant_after_fee - remain_eos == deposited_eos + insured_eos, "eos not equal");
         eosio_assert(transfer_token + issue_token >= asset(_UNIT, GAME_SYMBOL) && transfer_token + issue_token <= asset(10000 * _UNIT, GAME_SYMBOL), "transfer and issue token must in range 1 - 10000");
 
-        _game.modify(game_itr, 0, [&](auto &g) {
+        _game.modify(game_itr, 0, [&](auto& g) {
             g.reserve += deposited_eos;
             g.insure += insured_eos + action_total_fee;
             g.supply += issue_token;
@@ -350,7 +350,7 @@ public:
             user_itr = users.find(account);
         } else {
             eosio_assert(now() - user_itr->last_action >= _ACTION_COOL_DOWN, "action needs 5 seconds to cool down");
-            users.modify(user_itr, 0, [&](auto &u) {
+            users.modify(user_itr, 0, [&](auto& u) {
                 u.last_action = now();
             });
         }
@@ -372,7 +372,7 @@ public:
         asset action_total_fee = fee;
         quant_after_fee -= fee;
 
-        _game.modify(game_itr, 0, [&](auto &g) {
+        _game.modify(game_itr, 0, [&](auto& g) {
             g.reserve -= quant_after_fee;
             g.insure += action_total_fee;
             g.balance = token_balance;
@@ -433,7 +433,7 @@ public:
             user_itr = users.find(account);
         } else {
             eosio_assert(now() - user_itr->last_action >= _ACTION_COOL_DOWN, "action needs 5 seconds to cool down");
-            users.modify(user_itr, 0, [&](auto &u) {
+            users.modify(user_itr, 0, [&](auto& u) {
                 u.last_action = now();
             });
         }
@@ -446,7 +446,7 @@ public:
 
         send_fee(account, fee);
 
-        _game.modify(game_itr, 0, [&](auto &g) {
+        _game.modify(game_itr, 0, [&](auto& g) {
             g.insure -= quant_after_fee;
             g.supply -= quantity;
             g.circulation -= quantity;
@@ -480,33 +480,44 @@ public:
     void deposit(account_name account, asset quantity, string memo){
         auto game_itr = _game.begin();
         auto user_itr = users.find(account);
+        auto fee_itr = users.find(FEE_ACCOUNT);
         if(quantity.amount >= _REFER_PRICE / 2){
-            uint32_t refer = 0;
-            if(quantity.amount >= _REFER_PRICE){
-                refer = quantity.amount / _REFER_PRICE;
-            }
             if(user_itr == users.end()){
                 new_user(account, memo);
                 user_itr = users.find(account);
             }
-            if(user_itr != users.end()){
-                users.modify(user_itr, 0, [&](auto &u) {
-                    u.refer += refer;
-                    u.last_action = now();
-                });
-            }
-            auto refer_itr = refers.find(account);
-            if(refer_itr == refers.end() && user_itr->refer > 0){
-                refer_itr = refers.emplace(account, [&](auto &r){
-                    r.name = account;
-                });
-                _game.modify(game_itr, 0, [&](auto& g){
-                    g.next_refer = account;
-                });
+            if(quantity.amount >= _REFER_PRICE){
+                if(user_itr != users.end()){
+                    uint64_t refer = quantity.amount / _REFER_PRICE;
+                    users.modify(user_itr, 0, [&](auto& u) {
+                        u.refer += refer;
+                    });
+
+                    users.modify(fee_itr, 0, [&](auto& u) {
+                        u.refer += refer;
+                    });
+                }
+                auto refer_itr = refers.find(account);
+                if(refer_itr == refers.end() && user_itr->refer > 0){
+                    refer_itr = refers.emplace(account, [&](auto& r){
+                        r.name = account;
+                    });
+                }
+                auto refer_fee_itr = refers.find(FEE_ACCOUNT);
+                if(refer_fee_itr == refers.end() && fee_itr->refer > 0){
+                    refer_fee_itr = refers.emplace(account, [&](auto& r){
+                        r.name = FEE_ACCOUNT;
+                    });
+                }
+                if(game_itr->next_refer == BURN_ACCOUNT){
+                    _game.modify(game_itr, 0, [&](auto& g){
+                        g.next_refer = account;
+                    });
+                }
             }
         }
         
-        _game.modify(game_itr, 0, [&](auto &g) {
+        _game.modify(game_itr, 0, [&](auto& g) {
             g.insure += quantity;
         });
 
@@ -562,12 +573,12 @@ public:
 
         if(parent_itr->refer > 0){
             discount = 1;
-            users.modify(parent_itr, 0, [&](auto &u){
+            users.modify(parent_itr, 0, [&](auto& u){
                 u.refer --;
             });
         }
         
-        users.emplace(account, [&](auto &u) {
+        users.emplace(account, [&](auto& u) {
             u.name = account;
             u.parent = parent;
             u.discount = discount;
