@@ -27,7 +27,7 @@ public:
     const int64_t _INITIAL_PRICE = 100ll;
     const int64_t _MAX_SUPPLY_TIMES = 10ll;
     //TODO set the time to future game init time
-    const int64_t _GAME_INIT_TIME = 0ll;
+    const int64_t _GAME_INIT_TIME = 1534332157ll;
     //TODO 1 second to cool down
     const int64_t _ACTION_COOL_DOWN = 0ll;
     const int64_t _UNIT = 10000ll;
@@ -133,9 +133,27 @@ public:
             new_user(account, memo);
             user_itr = users.find(account);
         } else {
-            eosio_assert(now() - user_itr->last_action >= _ACTION_COOL_DOWN, "action needs 1 second to cool down");
+            eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "action needs to cool down");
             users.modify(user_itr, 0, [&](auto& u) {
                 u.last_action = now();
+            });
+        }
+
+        if( now() <= _GAME_INIT_TIME + 5 * 60ll ){
+            uint64_t last_action = now();
+            if( last_action <= _GAME_INIT_TIME + 1 * 60ll ){
+                last_action += 32 * 60ll;
+            } else if(last_action <= _GAME_INIT_TIME + 2 * 60ll){
+                last_action += 16 * 60ll;
+            } else if(last_action <= _GAME_INIT_TIME + 3 * 60ll){
+                last_action += 8 * 60ll;
+            } else if(last_action <= _GAME_INIT_TIME + 4 * 60ll){
+                last_action += 4 * 60ll;
+            } else if(last_action <= _GAME_INIT_TIME + 5 * 60ll){
+                last_action += 2 * 60ll;
+            }
+            users.modify(user_itr, 0, [&](auto& u) {
+                u.last_action = last_action;
             });
         }
 
@@ -347,9 +365,9 @@ public:
             new_user(account, memo);
             user_itr = users.find(account);
         } else {
-            eosio_assert(now() - user_itr->last_action >= _ACTION_COOL_DOWN, "action needs 5 seconds to cool down");
+            eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "action needs to cool down");
             users.modify(user_itr, 0, [&](auto& u) {
-                u.last_action = now();
+                    u.last_action = now();
             });
         }
 
@@ -429,7 +447,7 @@ public:
             new_user(account, memo);
             user_itr = users.find(account);
         } else {
-            eosio_assert(now() - user_itr->last_action >= _ACTION_COOL_DOWN, "action needs 5 seconds to cool down");
+            eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "action needs to cool down");
             users.modify(user_itr, 0, [&](auto& u) {
                 u.last_action = now();
             });
@@ -576,7 +594,7 @@ public:
                 u.refer --;
             });
         }
-        
+
         users.emplace(account, [&](auto& u) {
             u.name = account;
             u.parent = parent;
