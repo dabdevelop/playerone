@@ -22,6 +22,10 @@ cleos push action playeroneiss create '[ "oneplayerone", "10000000.0000 CGT"]' -
 
 cleos set account permission oneplayerone active '{"threshold": 1,"keys": [{"key": "EOS4wen3kfDXSHEb4nYmzDkcfvoPZb2jyoRS6mb6EbGJgM5Apu6Go","weight": 1}],"accounts": [{"permission":{"actor":"oneplayerone","permission":"eosio.code"},"weight":1}]}' owner -p oneplayerone
 
+# follow test must throw
+# cleos push action playeroneiss create '[ "playeronefee", "10000000.0000 EOS"]' -p playeroneiss
+# cleos push action playeroneiss issue '[ "playeronefee", "100000.0000 EOS"]' -p playeronefee
+# cleos push action playeroneiss transfer '["playeronefee", "oneplayerone", "10.1111 EOS", "testuseraaaa"]' -p playeronefee
 
 # follow test must throw
 # cleos set contract playeronefee ./build/eosio.token -p playeronefee
