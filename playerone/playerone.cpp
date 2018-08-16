@@ -60,6 +60,7 @@ public:
                 u.discount = 1;
             });
         }
+
         auto refer_itr = refers.find(FEE_ACCOUNT);
         if(refer_itr == refers.end() && user_itr->refer > 0){
             refer_itr = refers.emplace(_self, [&](auto& r){
@@ -104,6 +105,7 @@ public:
             if(memo == "deposit"){
                 deposit(from, quantity, memo);
             } else {
+                //TODO change the assert message here
                 eosio_assert( now() >= _GAME_INIT_TIME, "game will start at 15341787619");
                 buy(from, quantity, memo);
             }
@@ -377,6 +379,12 @@ public:
         asset quant_after_fee = transfer_eos;
         quant_after_fee -= fee;
 
+        _game.modify(game_itr, 0, [&](auto& g) {
+            g.reserve -= transfer_eos;
+            g.balance = token_balance;
+            g.circulation = circulation;
+        });
+
         send_fee(account, fee);
 
         fee.amount = quant_after_fee.amount;
@@ -390,10 +398,7 @@ public:
         quant_after_fee -= fee;
 
         _game.modify(game_itr, 0, [&](auto& g) {
-            g.reserve -= quant_after_fee;
             g.insure += action_total_fee;
-            g.balance = token_balance;
-            g.circulation = circulation;
         });
 
         if(remain_asset > asset(0, GAME_SYMBOL)){
@@ -456,14 +461,13 @@ public:
 
         asset fee = transfer_eos;
         fee.amount = (fee.amount + 99) / 100; /// 1% fee (round up)
-        asset action_total_fee = fee;
         asset quant_after_fee = transfer_eos;
         quant_after_fee -= fee;
 
         send_fee(account, fee);
 
         _game.modify(game_itr, 0, [&](auto& g) {
-            g.insure -= quant_after_fee;
+            g.insure -= transfer_eos;
             g.supply -= quantity;
             g.circulation -= quantity;
             g.burn += quantity;

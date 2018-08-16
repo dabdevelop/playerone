@@ -26,6 +26,7 @@ do
     cleos push action playeroneiss transfer '["testuseraaah", "oneplayerone", "100.0000 CGT", ""]' -p testuseraaah
     cleos push action playeroneiss transfer '["testuseraaai", "oneplayerone", "100.0000 CGT", ""]' -p testuseraaai
     cleos push action playeroneiss transfer '["testuseraaaj", "oneplayerone", "100.0000 CGT", ""]' -p testuseraaaj
+    cleos push action playeroneiss transfer '["testuseraaaj", "oneplayerone", "1000.0000 CGT", "burn"]' -p testuseraaaj
 
 done
 
@@ -52,7 +53,7 @@ do
     cleos push action playeroneiss transfer '["testuseraaah", "oneplayerone", "500.0000 CGT", ""]' -p testuseraaah
     cleos push action playeroneiss transfer '["testuseraaai", "oneplayerone", "500.0000 CGT", ""]' -p testuseraaai
     cleos push action playeroneiss transfer '["testuseraaaj", "oneplayerone", "500.0000 CGT", ""]' -p testuseraaaj
-
+    cleos push action playeroneiss transfer '["testuseraaaj", "oneplayerone", "1000.0000 CGT", "burn"]' -p testuseraaaj
 done
 
 for ((i=0; i<20; ++i)) 
@@ -78,10 +79,21 @@ do
     cleos push action playeroneiss transfer '["testuseraaah", "oneplayerone", "100.0000 CGT", ""]' -p testuseraaah
     cleos push action playeroneiss transfer '["testuseraaai", "oneplayerone", "100.0000 CGT", ""]' -p testuseraaai
     cleos push action playeroneiss transfer '["testuseraaaj", "oneplayerone", "100.0000 CGT", ""]' -p testuseraaaj
+    cleos push action playeroneiss transfer '["testuseraaaj", "oneplayerone", "1000.0000 CGT", "burn"]' -p testuseraaaj
 done
 
     
 
-cleos get table oneplayerone oneplayerone game
+
 cleos get table oneplayerone oneplayerone users
 cleos get table oneplayerone oneplayerone refers
+
+cleos get table oneplayerone oneplayerone game
+echo cleos get currency balance playeroneiss oneplayerone CGT
+cleos get currency balance playeroneiss oneplayerone CGT
+echo cleos get currency balance playeroneiss blackholeeos CGT
+cleos get currency balance playeroneiss blackholeeos CGT
+echo cleos get currency balance eosio.token oneplayerone EOS
+cleos get currency balance eosio.token oneplayerone EOS
+echo cleos get currency stats playeroneiss CGT
+cleos get currency stats playeroneiss CGT
