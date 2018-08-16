@@ -197,18 +197,9 @@ public:
             }
             if(circulation > asset(100000 * _UNIT, GAME_SYMBOL) && token_balance > asset(0, GAME_SYMBOL)){
                 crr = _crr(circulation);
-
-                //TODO test the cast from uint64_t to real_type
-
                 token_price = real_type(reserve_balance.amount) / (real_type(circulation.amount) * crr);
-
-                //TODO test the cast from uint64_t to real_type and real_type to uint64_t
-
                 asset token_per_exchange = asset(real_type(exchange_unit.amount) / token_price, GAME_SYMBOL);
                 crr = _crr(circulation + token_per_exchange);
-
-                //TODO test the cast from uint64_t to real_type
-
                 token_price = real_type((reserve_balance + exchange_unit).amount) / (real_type(circulation.amount) * crr);
                 token_per_exchange = asset(real_type(exchange_unit.amount) / token_price, GAME_SYMBOL);
                 if(token_balance >= token_per_exchange){
@@ -222,16 +213,10 @@ public:
                 } else {
                     token_per_exchange = token_balance;
                     crr = _crr(circulation + token_per_exchange);
-
-                    //TODO test the cast from uint64_t to real_type
-
                     token_price = real_type((reserve_balance + exchange_unit).amount) / (real_type(circulation.amount) * crr);
                     circulation += token_per_exchange;
                     token_balance -= token_per_exchange;
                     transfer_token += token_per_exchange;
-
-                    //TODO test the cast from uint64_t to real_type and real_type to uint64_t
-
                     asset to_deposit_eos = asset(token_price * real_type(token_per_exchange.amount), CORE_SYMBOL);
                     deposited_eos += to_deposit_eos;
                     remain_eos -= to_deposit_eos;
@@ -241,16 +226,10 @@ public:
                 eosio_assert(token_price >= real_type(0.0), "invalid token price");
             } else {
                 crr = _crr(circulation);
-
-                //TODO test the cast from uint64_t to real_type and real_type to uint64_t
-
                 asset to_issue_eos = asset( real_type(exchange_unit.amount) * crr, exchange_unit.symbol);
                 real_type INITIAL_PRICE(_INITIAL_PRICE);
                 real_type UNIT(10000.0);
                 INITIAL_PRICE = INITIAL_PRICE / UNIT;
-
-                //TODO test the cast from uint64_t to real_type and real_type to uint64_t
-
                 asset token_per_issue = asset(real_type(to_issue_eos.amount) / INITIAL_PRICE, GAME_SYMBOL);
                 circulation += token_per_issue;
                 issue_token += token_per_issue;
@@ -302,13 +281,6 @@ public:
                 make_tuple(account, issue_token, string("issue")))
             .send();
         }
-
-        //TODO check leaks here
-
-        // asset real_eos_balance = eosio::token(TOKEN_CONTRACT).get_balance(_self, symbol_type(CORE_SYMBOL).name());
-        // asset real_token_supply = eosio::token(GAME_TOKEN_CONTRACT).get_supply(symbol_type(GAME_SYMBOL).name());
-        // eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
-        // eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
     }
 
     void sell(account_name account, asset quantity, string memo){
@@ -333,22 +305,13 @@ public:
                 exchange_unit = remain_asset;
             }
             crr = _crr(circulation);
-
-            //TODO test the cast from uint64_t to real_type
-
             token_price = real_type(reserve_balance.amount) / (real_type(circulation.amount) * crr);
-
-            //TODO test the cast from uint64_t to real_type and real_type to uint64_t
-
             asset eos_per_exchange = asset(real_type(exchange_unit.amount) * token_price, CORE_SYMBOL);
             reserve_balance -= eos_per_exchange;
             if(reserve_balance < asset(0, CORE_SYMBOL)){
                 eosio_assert(false, "insufficient reserve eos");
             }
             token_price = reserve_balance.amount / (circulation.amount * crr);
-
-            //TODO test the cast from real_type to uint64_t and uint64_t to real_type
-
             eos_per_exchange = asset(real_type(exchange_unit.amount) * token_price, CORE_SYMBOL);
             transfer_eos += eos_per_exchange;
             circulation -= exchange_unit;
@@ -416,16 +379,6 @@ public:
                 make_tuple(_self, account, quant_after_fee, string("sell")))
             .send();
         }
-
-        //TODO check leaks here
-
-        // asset real_eos_balance = eosio::token(TOKEN_CONTRACT).get_balance(_self, symbol_type(CORE_SYMBOL).name());
-        // asset real_token_supply = eosio::token(GAME_TOKEN_CONTRACT).get_supply(symbol_type(GAME_SYMBOL).name());
-        // asset real_token_balance = eosio::token(GAME_TOKEN_CONTRACT).get_balance(_self, symbol_type(GAME_SYMBOL).name());
-        // eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
-        // eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
-        // eosio_assert(real_token_balance == game_itr->balance, "token balance leaks");
-        // eosio_assert(real_token_supply - real_token_balance == game_itr->circulation && game_itr->circulation >= asset(0, GAME_SYMBOL), "circulation leaks");
     }
 
     void burn(account_name account, asset quantity, string memo){
@@ -436,13 +389,7 @@ public:
         asset token_supply = game_itr->supply;
         asset token_balance = game_itr->balance;
         asset circulation = token_supply - token_balance;
-
-        //TODO test the cast from uint64_t to real_type
-
         real_type token_price = real_type(insure_balance.amount) / real_type(circulation.amount);
-
-        //TODO test the cast from uint64_t to real_type and real_type to uint64_t
-
         asset transfer_eos = asset(token_price * real_type(quantity.amount), CORE_SYMBOL);
 
         eosio_assert(transfer_eos <= asset(100 * _UNIT, CORE_SYMBOL) && transfer_eos >= asset(_UNIT, CORE_SYMBOL), "burn in range 1 - 100 eos");
@@ -488,13 +435,6 @@ public:
                 make_tuple(_self, account, quant_after_fee, string("burn return")))
             .send();
         }
-
-        //TODO check leaks here
-
-        // asset real_eos_balance = eosio::token(TOKEN_CONTRACT).get_balance(_self, symbol_type(CORE_SYMBOL).name());
-        // asset real_token_supply = eosio::token(GAME_TOKEN_CONTRACT).get_supply(symbol_type(GAME_SYMBOL).name());
-        // eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
-        // eosio_assert(real_token_supply == game_itr->supply, "token supply leaks");
     }
 
     void deposit(account_name account, asset quantity, string memo){
@@ -541,12 +481,6 @@ public:
         _game.modify(game_itr, 0, [&](auto& g) {
             g.insure += quantity;
         });
-
-        //TODO check leaks here
-
-        // auto eos_token = eosio::token(TOKEN_CONTRACT);
-        // asset real_eos_balance = eos_token.get_balance(_self, symbol_type(CORE_SYMBOL).name());
-        // eosio_assert(real_eos_balance == game_itr->reserve + game_itr->insure, "eos balance leaks");
     }
 
     void new_user(account_name account, string memo){
