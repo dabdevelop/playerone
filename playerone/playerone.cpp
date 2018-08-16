@@ -145,15 +145,15 @@ public:
         if( now() <= _GAME_INIT_TIME + 5 * 60ll ){
             uint64_t last_action = now();
             if( last_action <= _GAME_INIT_TIME + 1 * 60ll ){
-                last_action += 32 * 60ll;
+                last_action += 32 * 60ll + ((_GAME_INIT_TIME + 1 * 60ll) - last_action) * 16ll;
             } else if(last_action <= _GAME_INIT_TIME + 2 * 60ll){
-                last_action += 16 * 60ll;
+                last_action += 16 * 60ll + ((_GAME_INIT_TIME + 2 * 60ll) - last_action) * 8ll;
             } else if(last_action <= _GAME_INIT_TIME + 3 * 60ll){
-                last_action += 8 * 60ll;
+                last_action += 8 * 60ll + ((_GAME_INIT_TIME + 3 * 60ll) - last_action) * 4ll;
             } else if(last_action <= _GAME_INIT_TIME + 4 * 60ll){
-                last_action += 4 * 60ll;
+                last_action += 4 * 60ll + ((_GAME_INIT_TIME + 4 * 60ll) - last_action) * 2ll;
             } else if(last_action <= _GAME_INIT_TIME + 5 * 60ll){
-                last_action += 2 * 60ll;
+                last_action += 2 * 60ll + ((_GAME_INIT_TIME + 5 * 60ll) - last_action) * 1ll;
             }
             users.modify(user_itr, 0, [&](auto& u) {
                 u.last_action = last_action;
