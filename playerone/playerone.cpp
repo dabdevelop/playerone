@@ -105,8 +105,8 @@ public:
         if(quantity.symbol == CORE_SYMBOL){
             if(memo == "deposit"){
                 deposit(from, quantity, memo);
-            } else if(memo == "lendcpu"){
-                eosio_assert(quantity.amount >= 100ll && quantity.amount <= 10 * 10000ll, "lend cpu in range 0.01 - 10 EOS");
+            } else if(memo == "lease cpu"){
+                eosio_assert(quantity.amount >= 50ll && quantity.amount <= 10 * 10000ll, "lease cpu in range 0.005 - 10 EOS");
                 action(
                     permission_level{_self, N(active)},
                     TOKEN_CONTRACT, N(transfer),
