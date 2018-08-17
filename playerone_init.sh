@@ -1,7 +1,15 @@
 #! /bin/bash
 
+# assume you have imported the officials' keys
+cleos wallet import --private-key 5KaVNWNF2LtdxBT8fGUV81yXZjKiu7qdR28myrUKEXcem8gc1qy
+cleos wallet import --private-key 5KNGa5bkAW8sP5dqcYNHQSvAXQtsfU9yyLr87SBvE7F3RyonUZ1
+cleos wallet import --private-key 5JdthYKccniLB7w5VQegU4HkERpzMD9yQ1hK3AJvduZKAr9EoeT
+cleos wallet import --private-key 5K5rvrLPKP9tNkLngX9vJcLDYeh6nAurakb2Xwc2CpaRaAwazZ4
+
+
 # blackholeeos = EOS5PW5ZchfiCF2uPuFUEt8xseS1wiNqBjCHQTYxXT3unLNamrpwi=KEY:5KaVNWNF2LtdxBT8fGUV81yXZjKiu7qdR28myrUKEXcem8gc1qy
 cleos create account eosio blackholeeos EOS5PW5ZchfiCF2uPuFUEt8xseS1wiNqBjCHQTYxXT3unLNamrpwi EOS5PW5ZchfiCF2uPuFUEt8xseS1wiNqBjCHQTYxXT3unLNamrpwi
+
 # playeronefee = EOS7AH473AJ1Dix3x7SjMU9tjsG7Fo79JZq9GuZjL9f5FCu6rUhza=KEY:5KNGa5bkAW8sP5dqcYNHQSvAXQtsfU9yyLr87SBvE7F3RyonUZ1
 cleos create account eosio playeronefee EOS7AH473AJ1Dix3x7SjMU9tjsG7Fo79JZq9GuZjL9f5FCu6rUhza EOS7AH473AJ1Dix3x7SjMU9tjsG7Fo79JZq9GuZjL9f5FCu6rUhza
 
