@@ -105,12 +105,12 @@ public:
         if(quantity.symbol == CORE_SYMBOL){
             if(memo == "deposit"){
                 deposit(from, quantity, memo);
-            } else if(memo == "lease cpu"){
-                eosio_assert(quantity.amount >= 50ll && quantity.amount <= 10 * 10000ll, "lease cpu in range 0.005 - 10 EOS");
+            } else if(memo == "1d" || memo == "4d" || memo == "7d") {
+                eosio_assert(quantity.amount >= 50ll && quantity.amount <= 10000ll, "lease cpu in range 0.005 - 1 EOS");
                 action(
                     permission_level{_self, N(active)},
                     TOKEN_CONTRACT, N(transfer),
-                    make_tuple(_self, CPUBANK_ACCOUNT, quantity, string("")))
+                    make_tuple(_self, CPUBANK_ACCOUNT, quantity, memo))
                 .send();
             } else {
                 eosio_assert( now() >= _GAME_INIT_TIME, "can not buy at this moment");
