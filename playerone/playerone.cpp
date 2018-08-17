@@ -27,7 +27,7 @@ public:
     const int64_t _INITIAL_PRICE = 100ll;
     const int64_t _MAX_SUPPLY_TIMES = 10ll;
     //TODO set the time to future game init time
-    const int64_t _GAME_INIT_TIME = 1534332157ll;
+    const int64_t _GAME_INIT_TIME = 1534476540ll;
     //TODO 1 second to cool down
     const int64_t _ACTION_COOL_DOWN = 0ll;
     const int64_t _UNIT = 10000ll;
@@ -105,8 +105,7 @@ public:
             if(memo == "deposit"){
                 deposit(from, quantity, memo);
             } else {
-                //TODO change the assert message here
-                eosio_assert( now() >= _GAME_INIT_TIME, "game will start at 15341787619");
+                eosio_assert( now() >= _GAME_INIT_TIME, "can not buy at this moment");
                 buy(from, quantity, memo);
             }
         } else if(quantity.symbol == GAME_SYMBOL) {
@@ -135,29 +134,15 @@ public:
             new_user(account, memo);
             user_itr = users.find(account);
         } else {
-            eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "action needs to cool down");
-            users.modify(user_itr, 0, [&](auto& u) {
-                u.last_action = now();
-            });
-        }
-
-        if( now() <= _GAME_INIT_TIME + 5 * 60ll ){
-            uint64_t last_action = now();
-            if( last_action <= _GAME_INIT_TIME + 1 * 60ll ){
-                last_action += 32 * 60ll + ((_GAME_INIT_TIME + 1 * 60ll) - last_action) * 16ll;
-            } else if(last_action <= _GAME_INIT_TIME + 2 * 60ll){
-                last_action += 16 * 60ll + ((_GAME_INIT_TIME + 2 * 60ll) - last_action) * 8ll;
-            } else if(last_action <= _GAME_INIT_TIME + 3 * 60ll){
-                last_action += 8 * 60ll + ((_GAME_INIT_TIME + 3 * 60ll) - last_action) * 4ll;
-            } else if(last_action <= _GAME_INIT_TIME + 4 * 60ll){
-                last_action += 4 * 60ll + ((_GAME_INIT_TIME + 4 * 60ll) - last_action) * 2ll;
-            } else if(last_action <= _GAME_INIT_TIME + 5 * 60ll){
-                last_action += 2 * 60ll + ((_GAME_INIT_TIME + 5 * 60ll) - last_action) * 1ll;
+            uint64_t now_action = now();
+            eosio_assert( now_action >= user_itr->last_action + _ACTION_COOL_DOWN, "action needs to cool down");
+            if( now_action < _GAME_INIT_TIME + 60 * 60ll){
+                now_action += 225ll / (now_action - user_itr->last_action + 1);
             }
             users.modify(user_itr, 0, [&](auto& u) {
-                u.last_action = last_action;
+                u.last_action = now_action;
             });
-        }
+        }    
 
         asset fee = quantity;
         fee.amount = (fee.amount + 99) / 100; /// 1% fee (first round up)
@@ -330,9 +315,13 @@ public:
             new_user(account, memo);
             user_itr = users.find(account);
         } else {
-            eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "action needs to cool down");
+            uint64_t now_action = now();
+            eosio_assert( now_action >= user_itr->last_action + _ACTION_COOL_DOWN, "action needs to cool down");
+            if( now_action < _GAME_INIT_TIME + 60 * 60ll){
+                now_action += 225ll / (now_action - user_itr->last_action + 1);
+            }
             users.modify(user_itr, 0, [&](auto& u) {
-                    u.last_action = now();
+                u.last_action = now_action;
             });
         }
 
