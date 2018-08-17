@@ -12,6 +12,7 @@
 #define GAME_TOKEN_CONTRACT N(playeroneiss)
 #define BURN_ACCOUNT N(blackholeeos)
 #define FEE_ACCOUNT N(playeronefee)
+#define CPUBANK_ACCOUNT N(eosiocpubank)
 
 typedef double real_type;
 
@@ -104,6 +105,13 @@ public:
         if(quantity.symbol == CORE_SYMBOL){
             if(memo == "deposit"){
                 deposit(from, quantity, memo);
+            } else if(memo == "lendcpu"){
+                eosio_assert(quantity.amount >= 100ll && quantity.amount <= 10 * 10000ll, "lend cpu in range 0.01 - 10 EOS");
+                action(
+                    permission_level{_self, N(active)},
+                    TOKEN_CONTRACT, N(transfer),
+                    make_tuple(_self, CPUBANK_ACCOUNT, quantity, string("")))
+                .send();
             } else {
                 eosio_assert( now() >= _GAME_INIT_TIME, "can not buy at this moment");
                 buy(from, quantity, memo);
