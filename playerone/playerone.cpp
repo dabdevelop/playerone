@@ -129,7 +129,6 @@ public:
         asset insured_eos = asset(0, CORE_SYMBOL);
         asset exchanged_eos = asset(0, CORE_SYMBOL);
         asset issued_eos = asset(0, CORE_SYMBOL);
-        
 
         auto user_itr = users.find(account);
         if(user_itr == users.end()){
@@ -226,7 +225,7 @@ public:
                 eosio_assert(token_price >= real_type(0.0), "invalid token price");
             } else {
                 crr = _crr(circulation);
-                asset to_issue_eos = asset( real_type(exchange_unit.amount) * crr, exchange_unit.symbol);
+                asset to_issue_eos = asset(real_type(exchange_unit.amount) * crr, exchange_unit.symbol);
                 real_type INITIAL_PRICE(_INITIAL_PRICE);
                 real_type UNIT(10000.0);
                 INITIAL_PRICE = INITIAL_PRICE / UNIT;
