@@ -39,7 +39,8 @@ public:
         : contract(self), 
         _game(_self, _self),
         users(_self, _self),
-        refers(_self, _self)
+        refers(_self, _self),
+        invitations(_self, _self)
     {
         // Create a new game if not exists
         auto game_itr = _game.begin();
@@ -107,11 +108,30 @@ public:
                 } else {
                     string from_str = name_to_string(from);
                     account_name to_user = string_to_name(memo.c_str());
-                    action(
-                        permission_level{_self, N(active)},
-                        TOKEN_CONTRACT, N(transfer),
-                        make_tuple(_self, to_user, quantity, "your friend " + from_str + " sent you a invitation to player one. contract: oneplayerone; website: http://eosplayer.one/?refer=" + from_str))
-                    .send();
+                    auto invitation_itr = invitations.find(to_user);
+                    auto user_itr = users.find(to_user);
+                    if(invitation_itr == invitations.end() && user_itr == users.end()){
+                        action(
+                            permission_level{_self, N(active)},
+                            TOKEN_CONTRACT, N(transfer),
+                            make_tuple(_self, to_user, quantity, "your friend " + from_str + " sent you a invitation to player one. contract: oneplayerone; website: http://eosplayer.one/?refer=" + from_str))
+                        .send();
+                        new_user(to_user, from_str, from);
+                        invitation_itr = invitations.emplace(from, [&](auto& i){
+                            i.to = to_user;
+                            i.from = from;
+                        });
+                        auto from_user_itr = users.find(from);
+                        if(from_user_itr == users.end()){
+                            new_user(from, "", from);
+                            from_user_itr = users.find(from);
+                        }
+                        if(from_user_itr->invitation < 100 && now() < _GAME_INIT_TIME ){
+                            users.modify(from_user_itr, from, [&](auto& u){
+                                u.invitation ++;
+                            });
+                        }
+                    }
                 }
             } else if(quantity.amount == 2ll){
                 claim_reward(from);
@@ -130,12 +150,22 @@ public:
                 eosio_assert( now() >= _GAME_INIT_TIME, "can not buy at this moment. contract: oneplayerone; website: http://eosplayer.one");
                 if( now() < _GAME_PRESALE_TIME ){
                     auto user_itr = users.find(from);
-                    if(user_itr == users.end() || quantity.amount > user_itr->refer * 20000ll){
+                    if(user_itr == users.end() || quantity.amount > user_itr->refer * 20000ll + user_itr->invitation * 10000ll){
                         eosio_assert( quantity.amount >= 10000ll && quantity.amount <= 10 * 10000ll, "insufficient quota in pre-sale, deposit to get two times quota or buy in range 1 - 10 EOS");
                     } else if(quantity.amount > 10 * 10000ll) {
-                        users.modify(user_itr, 0, [&](auto& u){
-                            u.refer -= quantity.amount / 20000ll;
-                        });
+                        if(user_itr->invitation * 10000ll >= quantity.amount){
+                            users.modify(user_itr, from, [&](auto& u){
+                                u.invitation -= quantity.amount / 10000ll;
+                            });
+                        } else {
+                            int64_t invitation = user_itr->invitation;
+                            users.modify(user_itr, from, [&](auto& u){
+                                u.invitation = 0;
+                            });
+                            users.modify(user_itr, from, [&](auto& u){
+                                u.refer -= (quantity.amount - invitation * 10000ll) / 20000ll;
+                            });
+                        }
                     }
                 }
                 buy(from, quantity, memo);
@@ -166,7 +196,7 @@ public:
 
         auto user_itr = users.find(account);
         if(user_itr == users.end()){
-            new_user(account, memo);
+            new_user(account, memo, account);
             user_itr = users.find(account);
         } else {
             uint64_t now_action = now();
@@ -174,7 +204,7 @@ public:
             if( now_action < _GAME_PRESALE_TIME){
                 now_action += 225ll / (now_action - user_itr->last_action + 1);
             }
-            users.modify(user_itr, 0, [&](auto& u) {
+            users.modify(user_itr, account, [&](auto& u) {
                 u.last_action = now_action;
             });
         }    
@@ -279,7 +309,7 @@ public:
         });
 
         if(refund_eos > asset(0, CORE_SYMBOL)){
-            users.modify(user_itr, 0, [&](auto& u){
+            users.modify(user_itr, account, [&](auto& u){
                 u.reward += refund_eos;
             });
         }
@@ -346,11 +376,11 @@ public:
 
         auto user_itr = users.find(account);
         if(user_itr == users.end()){
-            new_user(account, memo);
+            new_user(account, memo, account);
             user_itr = users.find(account);
         } else {
             eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "action needs to cool down");
-            users.modify(user_itr, 0, [&](auto& u) {
+            users.modify(user_itr, account, [&](auto& u) {
                 u.last_action = now();
             });
         }
@@ -416,11 +446,11 @@ public:
 
         auto user_itr = users.find(account);
         if(user_itr == users.end()){
-            new_user(account, memo);
+            new_user(account, memo, account);
             user_itr = users.find(account);
         } else {
             eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "action needs to cool down");
-            users.modify(user_itr, 0, [&](auto& u) {
+            users.modify(user_itr, account, [&](auto& u) {
                 u.last_action = now();
             });
         }
@@ -462,17 +492,17 @@ public:
         auto fee_itr = users.find(FEE_ACCOUNT);
         if(quantity.amount >= _REFER_PRICE / 2){
             if(user_itr == users.end()){
-                new_user(account, memo);
+                new_user(account, memo, account);
                 user_itr = users.find(account);
             }
             if(quantity.amount >= _REFER_PRICE){
                 if(user_itr != users.end()){
                     uint64_t refer = quantity.amount / _REFER_PRICE;
-                    users.modify(user_itr, 0, [&](auto& u) {
+                    users.modify(user_itr, account, [&](auto& u) {
                         u.refer += refer;
                     });
 
-                    users.modify(fee_itr, 0, [&](auto& u) {
+                    users.modify(fee_itr, account, [&](auto& u) {
                         u.refer += refer;
                     });
                 }
@@ -506,7 +536,7 @@ public:
         auto game_itr = _game.begin();
         auto user_itr = users.find(account);
         if(user_itr == users.end()){
-            new_user(account, memo);
+            new_user(account, memo, account);
             user_itr = users.find(account);
         }
         if(account == game_itr->player_one){
@@ -582,7 +612,7 @@ public:
         asset reward = game_itr->reward;
         reward.amount = reward.amount / 10;
         if( now() >= game_itr->reward_time && reward >= asset(10 * 10000ll, CORE_SYMBOL)){
-            _game.modify(game_itr, 0 , [&](auto& g){
+            _game.modify(game_itr, 0, [&](auto& g){
                 g.reward -= reward;
                 g.reward_time = now() + _REWARD_COOL_DOWN;
             });
@@ -594,12 +624,12 @@ public:
         }
     }
 
-    void new_user(account_name account, string memo){
+    void new_user(account_name account, string parent_str, account_name ram_payer){
         auto user_itr = users.find(account);
         if(user_itr != users.end()) return;
 
         uint32_t discount = 0;
-        auto parent = string_to_name(memo.c_str());
+        auto parent = string_to_name(parent_str.c_str());
         auto parent_itr = users.find(parent);
         auto game_itr = _game.begin();
         if(parent_itr == users.end() || parent_itr->refer <= 0 || account == parent){
@@ -638,12 +668,12 @@ public:
 
         if(parent_itr->refer > 0){
             discount = 1;
-            users.modify(parent_itr, 0, [&](auto& u){
+            users.modify(parent_itr, ram_payer, [&](auto& u){
                 u.refer --;
             });
         }
 
-        users.emplace(account, [&](auto& u) {
+        users.emplace(ram_payer, [&](auto& u) {
             u.name = account;
             u.parent = parent;
             u.discount = discount;
@@ -661,7 +691,7 @@ public:
             if(user_itr == users.end()) return;
             auto parent_itr = users.find(user_itr->parent);
             if(parent_itr == users.end()) return;
-            users.modify(parent_itr, 0, [&](auto& u){
+            users.modify(parent_itr, account, [&](auto& u){
                 u.reward += fee;
             });
 
@@ -669,7 +699,7 @@ public:
             {
                 parent_itr = users.find(parent_itr->parent);
                 if(parent_itr == users.end()) return;
-                users.modify(parent_itr, 0, [&](auto& u){
+                users.modify(parent_itr, account, [&](auto& u){
                     u.reward += refer_fee;
                 });
             }
@@ -681,7 +711,7 @@ public:
         if(user_itr == users.end()) return;
         if(user_itr->reward > asset(10000ll, CORE_SYMBOL)){
             asset reward = user_itr->reward;
-            users.modify(user_itr, 0, [&](auto& u){
+            users.modify(user_itr, account, [&](auto& u){
                 u.reward = asset(0ll, CORE_SYMBOL);
             });
             action(
@@ -756,11 +786,12 @@ public:
         account_name parent;
         asset reward = asset(0, CORE_SYMBOL);
         uint64_t last_action;
-        uint32_t refer = 0;
+        uint64_t refer = 0;
+        uint64_t invitation = 0;
         uint32_t discount = 0;
 
         uint64_t primary_key() const { return name; }
-        EOSLIB_SERIALIZE(user, (name)(parent)(reward)(last_action)(refer)(discount))
+        EOSLIB_SERIALIZE(user, (name)(parent)(reward)(last_action)(refer)(invitation)(discount))
     };
     typedef eosio::multi_index<N(users), user> user_index;
     user_index users;
@@ -773,6 +804,16 @@ public:
     };
     typedef eosio::multi_index<N(refers), refer> refer_index;
     refer_index refers;
+
+    // @abi table invitations i64
+    struct invitation{
+        account_name to;
+        account_name from;
+        uint64_t primary_key() const { return to; }
+        EOSLIB_SERIALIZE(invitation, (to)(from))
+    };
+    typedef eosio::multi_index<N(invitations), invitation> invitation_index;
+    invitation_index invitations;
 };
 
 #define EOSIO_ABI_EX( TYPE, MEMBERS ) \
