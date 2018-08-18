@@ -117,7 +117,7 @@ public:
                     make_tuple(_self, CPUBANK_ACCOUNT, quantity, memo))
                 .send();
             } else {
-                eosio_assert( now() >= _GAME_INIT_TIME, "can not buy at this moment");
+                eosio_assert( now() >= _GAME_INIT_TIME, "can not buy at this moment. contract: oneplayerone; website: http://eosplayer.one");
                 if( now() < _GAME_PRESALE_TIME ){
                     auto user_itr = users.find(from);
                     if(user_itr == users.end() || quantity.amount > user_itr->refer * 20000ll){
@@ -278,7 +278,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, transfer_token, string("buy")))
+                make_tuple(_self, account, transfer_token, string("buy token. contract: oneplayerone; website: http://eosplayer.one")))
             .send();
         }
 
@@ -286,7 +286,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(issue),
-                make_tuple(account, issue_token, string("issue")))
+                make_tuple(account, issue_token, string("thank you for supporting us. contract: oneplayerone; website: http://eosplayer.one")))
             .send();
         }
     }
@@ -377,7 +377,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, remain_asset, string("refund")))
+                make_tuple(_self, account, remain_asset, string("refund the remaining token. contract: oneplayerone; website: http://eosplayer.one")))
             .send();
         }
 
@@ -385,7 +385,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, quant_after_fee, string("sell")))
+                make_tuple(_self, account, quant_after_fee, string("sell tokens and get EOS return. contract: oneplayerone; website: http://eosplayer.one")))
             .send();
         }
     }
@@ -433,7 +433,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, BURN_ACCOUNT, quantity, string("burn token")))
+                make_tuple(_self, BURN_ACCOUNT, quantity, string("burn token by transfering token to black hole account")))
             .send();
         }
 
@@ -441,7 +441,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, quant_after_fee, string("burn return")))
+                make_tuple(_self, account, quant_after_fee, string("burn and get EOS return. contract: oneplayerone; website: http://eosplayer.one")))
             .send();
         }
     }
@@ -535,19 +535,19 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, BURN_ACCOUNT, fee, string("burn the unstaking fee")))
+                make_tuple(_self, BURN_ACCOUNT, fee, string("burn the unstaking fee.")))
             .send();
 
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, staked, string("maybe some one else surpass your stake, you are not player one now")))
+                make_tuple(_self, account, staked, string("maybe some one else surpass your stake, you are not player one now. contract: oneplayerone; website: http://eosplayer.one")))
             .send();
 
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, asset(1ll, CORE_SYMBOL), string("maybe some one else surpass your stake, you are not player one now")))
+                make_tuple(_self, account, asset(1ll, CORE_SYMBOL), string("maybe some one else surpass your stake, you are not player one now. contract: oneplayerone; website: http://eosplayer.one")))
             .send();
             
             claim_reward(game_itr->player_one);
@@ -579,7 +579,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, reward, string("stake reward")))
+                make_tuple(_self, account, reward, string("stake reward of player one. contract: oneplayerone; website: http://eosplayer.one")))
             .send();
         }
     }
@@ -677,7 +677,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, user_itr->name, reward, string("refer fee")))
+                make_tuple(_self, user_itr->name, reward, string("claim refer reward. contract: oneplayerone; website: http://eosplayer.one")))
             .send();
         }
     }
