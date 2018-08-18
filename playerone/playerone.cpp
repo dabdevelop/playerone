@@ -4,7 +4,6 @@
 
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/asset.hpp>
-#include <eosio.token/eosio.token.hpp>
 #include <math.h>
 
 #define GAME_SYMBOL S(4, CGT)
