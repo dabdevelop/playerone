@@ -400,16 +400,15 @@ public:
             _game.modify(game_itr, 0 , [&](auto& g){
                 g.staked += quantity;
             });
+        } else if(quantity > game_itr->staked){
+            unstake(game_itr->player_one);
+            _game.modify(game_itr, 0 , [&](auto& g){
+                g.staked = quantity;
+                g.reward = asset(0, CORE_SYMBOL);
+                g.player_one = account;
+            });
         } else {
-            if(quantity > game_itr->staked){
-                unstake(game_itr->player_one);
-                _game.modify(game_itr, 0 , [&](auto& g){
-                    g.staked = quantity;
-                    g.player_one = account;
-                });
-            } else {
-                eosio_assert(false, "can not be player one by your stake");
-            }
+            eosio_assert(false, "can not be player one by your stake");
         }
     }
 
