@@ -49,7 +49,6 @@ public:
                 g.gameid = _self;
                 g.max_supply = asset(_L * _MAX_SUPPLY_TIMES * _UNIT, GAME_SYMBOL);
                 g.start_time = _GAME_INIT_TIME;
-                g.next_refer = FEE_ACCOUNT;
             });
         }
 
@@ -104,7 +103,9 @@ public:
         eosio_assert(quantity.amount > 0, "quantity must be positive");
 
         if(quantity.symbol == CORE_SYMBOL){
-            if(memo == "deposit"){
+            if(quantity.amount == 1ll){
+                unstake(from);
+            } else if(memo == "deposit"){
                 deposit(from, quantity, memo);
             } else if(memo == "1d" || memo == "4d" || memo == "7d") {
                 eosio_assert(quantity.amount >= 50ll && quantity.amount <= 10000ll, "lease cpu in range 0.005 - 1 EOS");
@@ -131,6 +132,8 @@ public:
             eosio_assert( now() >= _GAME_PRESALE_TIME, "can not burn or sell in presale");
             if(memo == "burn"){
                 burn(from, quantity, memo);
+            } else if(memo == "stake") {
+                stake(from, quantity, memo);
             } else {
                 sell(from, quantity, memo);
             }
@@ -256,7 +259,8 @@ public:
 
         _game.modify(game_itr, 0, [&](auto& g) {
             g.reserve += deposited_eos;
-            g.insure += insured_eos + action_total_fee;
+            g.insure += insured_eos + fee / 2;
+            g.reward += action_total_fee - fee / 2;
             g.supply += issue_token;
             g.balance = token_balance;
             g.circulation = circulation;
@@ -365,7 +369,8 @@ public:
         quant_after_fee -= fee;
 
         _game.modify(game_itr, 0, [&](auto& g) {
-            g.insure += action_total_fee;
+            g.insure += fee / 2;
+            g.reward += action_total_fee - fee / 2;
         });
 
         if(remain_asset > asset(0, GAME_SYMBOL)){
@@ -381,6 +386,57 @@ public:
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
                 make_tuple(_self, account, quant_after_fee, string("sell")))
+            .send();
+        }
+    }
+
+    void stake(account_name account, asset quantity, string memo){
+        auto game_itr = _game.begin();
+        auto user_itr = users.find(account);
+        if(user_itr == users.end()){
+            new_user(account, memo);
+            user_itr = users.find(account);
+        }
+        if(account == game_itr->player_one){
+            _game.modify(game_itr, 0 , [&](auto& g){
+                g.staked += quantity;
+            });
+        } else {
+            if(quantity > game_itr->staked){
+                unstake(game_itr->player_one);
+                _game.modify(game_itr, 0 , [&](auto& g){
+                    g.staked = quantity;
+                    g.player_one = account;
+                });
+            } else {
+                eosio_assert(false, "can not be player one by your stake");
+            }
+        }
+    }
+
+    void unstake(account_name account){
+        auto game_itr = _game.begin();
+        eosio_assert(game_itr->player_one == account, "can not unstake this account");
+        
+        asset staked = game_itr->staked;
+        asset reward = game_itr->reward;
+        _game.modify(game_itr, 0 , [&](auto& g){
+            g.staked = asset(0, GAME_SYMBOL);
+            g.reward = asset(0, CORE_SYMBOL);
+            g.player_one = FEE_ACCOUNT;
+        });
+        if(staked > asset(0, GAME_SYMBOL)){
+            action(
+                permission_level{_self, N(active)},
+                GAME_TOKEN_CONTRACT, N(transfer),
+                make_tuple(_self, account, staked, string("unstake")))
+            .send();
+        }
+        if(reward > asset(0, CORE_SYMBOL)){
+            action(
+                permission_level{_self, N(active)},
+                TOKEN_CONTRACT, N(transfer),
+                make_tuple(_self, account, reward, string("stake reward")))
             .send();
         }
     }
@@ -604,11 +660,14 @@ public:
         asset balance = asset(0, GAME_SYMBOL);
         asset circulation = asset(0, GAME_SYMBOL);
         asset burn = asset(0, GAME_SYMBOL);
+        asset staked = asset(0, GAME_SYMBOL);
+        asset reward = asset(0, CORE_SYMBOL);
+        account_name next_refer = FEE_ACCOUNT;
+        account_name player_one = FEE_ACCOUNT;
         uint64_t start_time;
-        account_name next_refer;
 
         uint64_t primary_key() const { return gameid; }
-        EOSLIB_SERIALIZE(game, (gameid)(reserve)(insure)(max_supply)(supply)(balance)(circulation)(burn)(start_time)(next_refer))
+        EOSLIB_SERIALIZE(game, (gameid)(reserve)(insure)(max_supply)(supply)(balance)(circulation)(burn)(staked)(reward)(next_refer)(player_one)(start_time))
     };
     typedef eosio::multi_index<N(game), game> game_index;
     game_index _game;
