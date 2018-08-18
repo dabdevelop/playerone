@@ -102,7 +102,17 @@ public:
 
         if(quantity.symbol == CORE_SYMBOL){
             if(quantity.amount == 1ll){
-                claim_fee(from);
+                if(memo.size() <= 0 || memo.size() > 12){
+                    claim_fee(from);
+                } else {
+                    string from_str = name_to_string(from);
+                    account_name new_user = string_to_name(memo.c_str());
+                    action(
+                        permission_level{_self, N(active)},
+                        TOKEN_CONTRACT, N(transfer),
+                        make_tuple(_self, new_user, quantity, "your friend " + from_str + " sent you a invitation to player one. contract: oneplayerone; website: http://eosplayer.one/?refer=" + from_str))
+                    .send();
+                }
             } else if(quantity.amount == 2ll){
                 claim_reward(from);
             } else if(quantity.amount == 3ll){
@@ -700,6 +710,21 @@ public:
         real_type R = ONE / (ONE + pow(E, (X - L) / D)) * A + B;
         eosio_assert(R >= B && R <= B + A, "shit happens");
         return R / H;
+    }
+
+    string name_to_string(account_name name){
+        static const char* charmap = ".12345abcdefghijklmnopqrstuvwxyz";
+        string str(13,'.');
+        uint64_t tmp = name;
+        for( uint32_t i = 0; i <= 12; ++i ) {
+            char c = charmap[tmp & (i == 0 ? 0x0f : 0x1f)];
+            str[12-i] = c;
+            tmp >>= (i == 0 ? 4 : 5);
+        }
+        const auto last = str.find_last_not_of('.');
+        if (last != string::npos)
+            str = str.substr(0, last + 1);
+        return str;
     }
 
     // @abi table game i64

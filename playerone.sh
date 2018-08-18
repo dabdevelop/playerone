@@ -90,6 +90,8 @@ done
 # cleos transfer testuseraaaa oneplayerone "0.0001 EOS" "test" -p testuseraaaa
 # cleos transfer testuseraaai oneplayerone "0.0001 EOS" "test" -p testuseraaai
 
+cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "0.0001 EOS", "testuseraaaj"]' -p testuseraaaa
+
 cleos get table oneplayerone oneplayerone users
 cleos get table oneplayerone oneplayerone refers
 cleos get table oneplayerone oneplayerone game
