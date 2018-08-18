@@ -106,11 +106,11 @@ public:
                     claim_fee(from);
                 } else {
                     string from_str = name_to_string(from);
-                    account_name new_user = string_to_name(memo.c_str());
+                    account_name to_user = string_to_name(memo.c_str());
                     action(
                         permission_level{_self, N(active)},
                         TOKEN_CONTRACT, N(transfer),
-                        make_tuple(_self, new_user, quantity, "your friend " + from_str + " sent you a invitation to player one. contract: oneplayerone; website: http://eosplayer.one/?refer=" + from_str))
+                        make_tuple(_self, to_user, quantity, "your friend " + from_str + " sent you a invitation to player one. contract: oneplayerone; website: http://eosplayer.one/?refer=" + from_str))
                     .send();
                 }
             } else if(quantity.amount == 2ll){
