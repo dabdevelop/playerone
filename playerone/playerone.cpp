@@ -551,7 +551,7 @@ public:
             .send();
             
             claim_reward(game_itr->player_one);
-        } else if(staked > asset(0ll, GAME_SYMBOL)){
+        } else if(staked > asset(0, GAME_SYMBOL)){
             _game.modify(game_itr, 0, [&](auto& g) {
                 g.supply -= staked;
                 g.circulation -= staked;
