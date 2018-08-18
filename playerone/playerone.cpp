@@ -31,6 +31,7 @@ public:
     const int64_t _GAME_PRESALE_TIME = _GAME_INIT_TIME + 60 * 60ll;
     //TODO 1 second to cool down
     const int64_t _ACTION_COOL_DOWN = 0ll;
+    const int64_t _REWARD_COOL_DOWN = 24 * 60 * 60ll;
     const int64_t _UNIT = 10000ll;
     const int64_t _REFER_PRICE = _UNIT;
 
@@ -48,6 +49,7 @@ public:
                 g.gameid = _self;
                 g.max_supply = asset(_L * _MAX_SUPPLY_TIMES * _UNIT, GAME_SYMBOL);
                 g.start_time = _GAME_INIT_TIME;
+                g.reward_time = _GAME_PRESALE_TIME + _REWARD_COOL_DOWN;
             });
         }
 
@@ -102,6 +104,8 @@ public:
             if(quantity.amount == 1ll){
                 claim_fee(from);
             } else if(quantity.amount == 2ll){
+                claim_reward(from);
+            } else if(quantity.amount == 3ll){
                 unstake(from);
             } else if(memo == "deposit"){
                 deposit(from, quantity, memo);
@@ -488,7 +492,6 @@ public:
         });
     }
 
-
     void stake(account_name account, asset quantity, string memo){
         auto game_itr = _game.begin();
         auto user_itr = users.find(account);
@@ -504,33 +507,75 @@ public:
             unstake(game_itr->player_one);
             _game.modify(game_itr, 0 , [&](auto& g){
                 g.staked = quantity;
-                g.reward = asset(0, CORE_SYMBOL);
                 g.player_one = account;
+                g.reward_time = now() + _REWARD_COOL_DOWN;
             });
         } else {
-            eosio_assert(false, "need stake more tokens to overcome player one");
+            eosio_assert(false, "need stake more tokens to overcome current player one");
         }
     }
 
     void unstake(account_name account){
         auto game_itr = _game.begin();
-        eosio_assert(game_itr->player_one == account, "can not unstake this account");
-        
+        eosio_assert(game_itr->player_one == account, "can only unstake player one's token");
         asset staked = game_itr->staked;
-        asset reward = game_itr->reward;
         _game.modify(game_itr, 0 , [&](auto& g){
             g.staked = asset(0, GAME_SYMBOL);
-            g.reward = asset(0, CORE_SYMBOL);
             g.player_one = FEE_ACCOUNT;
         });
-        if(staked > asset(0, GAME_SYMBOL)){
+        if(staked >= asset(1000 * 10000ll, GAME_SYMBOL)){
+            asset fee = staked / 10;
+            staked -= fee;
+            _game.modify(game_itr, 0, [&](auto& g) {
+                g.supply -= fee;
+                g.circulation -= fee;
+                g.burn += fee;
+            });
+
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, staked, string("unstake")))
+                make_tuple(_self, BURN_ACCOUNT, fee, string("burn the unstaking fee")))
+            .send();
+
+            action(
+                permission_level{_self, N(active)},
+                GAME_TOKEN_CONTRACT, N(transfer),
+                make_tuple(_self, account, staked, string("maybe some one else surpass your stake, you are not player one now")))
+            .send();
+
+            action(
+                permission_level{_self, N(active)},
+                TOKEN_CONTRACT, N(transfer),
+                make_tuple(_self, account, asset(1ll, CORE_SYMBOL), string("maybe some one else surpass your stake, you are not player one now")))
+            .send();
+            
+            claim_reward(game_itr->player_one);
+        } else if(staked > asset(0ll, GAME_SYMBOL)){
+            _game.modify(game_itr, 0, [&](auto& g) {
+                g.supply -= staked;
+                g.circulation -= staked;
+                g.burn += staked;
+            });
+
+            action(
+                permission_level{_self, N(active)},
+                GAME_TOKEN_CONTRACT, N(transfer),
+                make_tuple(_self, BURN_ACCOUNT, staked, string("too less to get the stake back")))
             .send();
         }
-        if(reward > asset(0, CORE_SYMBOL)){
+    }
+
+    void claim_reward(account_name account){
+        auto game_itr = _game.begin();
+        eosio_assert(game_itr->player_one == account, "only player one can claim the reward");
+        asset reward = game_itr->reward;
+        reward.amount = reward.amount / 10;
+        if( now() >= game_itr->reward_time && reward >= asset(10 * 10000ll, CORE_SYMBOL)){
+            _game.modify(game_itr, 0 , [&](auto& g){
+                g.reward -= reward;
+                g.reward_time = now() + _REWARD_COOL_DOWN;
+            });
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
@@ -538,7 +583,6 @@ public:
             .send();
         }
     }
-
 
     void new_user(account_name account, string memo){
         auto user_itr = users.find(account);
@@ -673,9 +717,10 @@ public:
         account_name next_refer = FEE_ACCOUNT;
         account_name player_one = FEE_ACCOUNT;
         uint64_t start_time;
+        uint64_t reward_time;
 
         uint64_t primary_key() const { return gameid; }
-        EOSLIB_SERIALIZE(game, (gameid)(reserve)(insure)(max_supply)(supply)(balance)(circulation)(burn)(staked)(reward)(next_refer)(player_one)(start_time))
+        EOSLIB_SERIALIZE(game, (gameid)(reserve)(insure)(max_supply)(supply)(balance)(circulation)(burn)(staked)(reward)(next_refer)(player_one)(start_time)(reward_time))
     };
     typedef eosio::multi_index<N(game), game> game_index;
     game_index _game;
