@@ -29,6 +29,7 @@ public:
     const int64_t _MAX_SUPPLY_TIMES = 10ll;
     //TODO set the time to future game init time
     const int64_t _GAME_INIT_TIME = 1534476540ll;
+    const int64_t _GAME_PRESALE_TIME = _GAME_INIT_TIME + 60 * 60ll;
     //TODO 1 second to cool down
     const int64_t _ACTION_COOL_DOWN = 0ll;
     const int64_t _UNIT = 10000ll;
@@ -114,9 +115,20 @@ public:
                 .send();
             } else {
                 eosio_assert( now() >= _GAME_INIT_TIME, "can not buy at this moment");
+                if( now() < _GAME_PRESALE_TIME ){
+                    auto user_itr = users.find(from);
+                    if(user_itr == users.end() || quantity.amount > user_itr->refer * 20000ll){
+                        eosio_assert( quantity.amount >= 10000ll && quantity.amount <= 10 * 10000ll, "insufficient quota in pre-sale, deposit to get two times quota or buy in range 1 - 10 EOS");
+                    } else if(quantity.amount > 10 * 10000ll) {
+                        users.modify(user_itr, 0, [&](auto& u){
+                            u.refer -= quantity.amount / 20000ll;
+                        });
+                    }
+                }
                 buy(from, quantity, memo);
             }
         } else if(quantity.symbol == GAME_SYMBOL) {
+            eosio_assert( now() >= _GAME_PRESALE_TIME, "can not burn or sell in presale");
             if(memo == "burn"){
                 burn(from, quantity, memo);
             } else {
@@ -144,7 +156,7 @@ public:
         } else {
             uint64_t now_action = now();
             eosio_assert( now_action >= user_itr->last_action + _ACTION_COOL_DOWN, "action needs to cool down");
-            if( now_action < _GAME_INIT_TIME + 60 * 60ll){
+            if( now_action < _GAME_PRESALE_TIME){
                 now_action += 225ll / (now_action - user_itr->last_action + 1);
             }
             users.modify(user_itr, 0, [&](auto& u) {
@@ -323,13 +335,9 @@ public:
             new_user(account, memo);
             user_itr = users.find(account);
         } else {
-            uint64_t now_action = now();
-            eosio_assert( now_action >= user_itr->last_action + _ACTION_COOL_DOWN, "action needs to cool down");
-            if( now_action < _GAME_INIT_TIME + 60 * 60ll){
-                now_action += 225ll / (now_action - user_itr->last_action + 1);
-            }
+            eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "action needs to cool down");
             users.modify(user_itr, 0, [&](auto& u) {
-                u.last_action = now_action;
+                u.last_action = now();
             });
         }
 
