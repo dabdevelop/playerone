@@ -75,7 +75,6 @@ public:
             return;
         }
         eosio_assert(quantity.is_valid(), "invalid token transfer");
-        eosio_assert(quantity.amount > 0, "quantity must be positive");
         eosio_assert(quantity.symbol == CORE_SYMBOL, "unexpected asset symbol input");
 
         transfer(from, to, quantity, memo);
@@ -87,7 +86,6 @@ public:
             return;
         }
         eosio_assert(quantity.is_valid(), "invalid token transfer");
-        eosio_assert(quantity.amount > 0, "quantity must be positive");
         eosio_assert(quantity.symbol == GAME_SYMBOL, "unexpected asset symbol input");
 
         transfer(from, to, quantity, memo);
@@ -99,10 +97,11 @@ public:
             return;
         }
         eosio_assert(quantity.is_valid(), "invalid token transfer");
-        eosio_assert(quantity.amount > 0, "quantity must be positive");
 
         if(quantity.symbol == CORE_SYMBOL){
             if(quantity.amount == 1ll){
+                claim_fee(from);
+            } else if(quantity.amount == 2ll){
                 unstake(from);
             } else if(memo == "deposit"){
                 deposit(from, quantity, memo);
@@ -172,7 +171,7 @@ public:
         asset quant_after_fee = quantity;
         quant_after_fee -= fee;
 
-        send_fee(account, fee);
+        collect_fee(account, fee);
 
         fee.amount = quant_after_fee.amount;
         if(user_itr->discount == 0){
@@ -266,11 +265,9 @@ public:
         });
 
         if(refund_eos > asset(0, CORE_SYMBOL)){
-            action(
-                permission_level{_self, N(active)},
-                TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, refund_eos, string("refund")))
-            .send();
+            users.modify(user_itr, 0, [&](auto& u){
+                u.reward += refund_eos;
+            });
         }
 
         if(transfer_token > asset(0, GAME_SYMBOL)){
@@ -355,7 +352,7 @@ public:
             g.circulation = circulation;
         });
 
-        send_fee(account, fee);
+        collect_fee(account, fee);
 
         fee.amount = quant_after_fee.amount;
         if(user_itr->discount == 0){
@@ -469,7 +466,7 @@ public:
         asset quant_after_fee = transfer_eos;
         quant_after_fee -= fee;
 
-        send_fee(account, fee);
+        collect_fee(account, fee);
 
         _game.modify(game_itr, 0, [&](auto& g) {
             g.insure -= transfer_eos;
@@ -598,7 +595,7 @@ public:
         });
     }
 
-    void send_fee(account_name account, asset fee){
+    void collect_fee(account_name account, asset fee){
         if (fee.amount > 0){
             auto refer_fee = fee;
             refer_fee = fee / 2;
@@ -609,22 +606,34 @@ public:
             auto parent_itr = users.find(user_itr->parent);
             if(parent_itr == users.end()) return;
 
-            action(
-                permission_level{_self, N(active)},
-                TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, parent_itr->name, fee, string("refer fee")))
-            .send();
+            users.modify(parent_itr, 0, [&](auto& u){
+                u.reward += fee;
+            });
 
             if (refer_fee.amount > 0)
             {
                 parent_itr = users.find(parent_itr->parent);
                 if(parent_itr == users.end()) return;
-                action(
-                    permission_level{_self, N(active)},
-                    TOKEN_CONTRACT, N(transfer),
-                    make_tuple(_self, parent_itr->name, refer_fee, string("refer fee")))
-                .send();
+                    users.modify(parent_itr, 0, [&](auto& u){
+                    u.reward += refer_fee;
+                });
             }
+        }
+    }
+
+    void claim_fee(account_name account){
+        auto user_itr = users.find(account);
+        if(user_itr == users.end()) return;
+        if(user_itr->reward > asset(10000ll, CORE_SYMBOL)){
+            asset reward = user_itr->reward;
+            users.modify(user_itr, 0, [&](auto& u){
+                u.reward = asset(0ll, CORE_SYMBOL);
+            });
+            action(
+                permission_level{_self, N(active)},
+                TOKEN_CONTRACT, N(transfer),
+                make_tuple(_self, user_itr->name, reward, string("refer fee")))
+            .send();
         }
     }
 
@@ -674,12 +683,13 @@ public:
     struct user{
         account_name name;
         account_name parent;
+        asset reward = asset(0, CORE_SYMBOL);
         uint64_t last_action;
         uint32_t refer = 0;
         uint32_t discount = 0;
 
         uint64_t primary_key() const { return name; }
-        EOSLIB_SERIALIZE(user, (name)(parent)(last_action)(refer)(discount))
+        EOSLIB_SERIALIZE(user, (name)(parent)(reward)(last_action)(refer)(discount))
     };
     typedef eosio::multi_index<N(users), user> user_index;
     user_index users;
