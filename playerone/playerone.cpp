@@ -105,8 +105,10 @@ public:
         if(quantity.symbol == CORE_SYMBOL){
             if(quantity.amount == 1ll){
                 if(memo.size() <= 0 || memo.size() > 12){
+                    // 用户通过向合约转账0.0001EOS取回推荐人奖金
                     claim_fee(from);
                 } else {
+                    // 预售前可以通过发送邀请获得免费的预售额度。发送邀请的方式为：向合约转账0.0001EOS并且备注未注册的EOS账号，将成为他的推荐上级（需要消耗少量RAM），每个邀请增加1EOS预售额度，单个账号不超过50EOS
                     string from_str = name_to_string(from);
                     account_name to_user = string_to_name(memo.c_str());
                     auto invitation_itr = invitations.find(to_user);
@@ -135,12 +137,18 @@ public:
                     }
                 }
             } else if(quantity.amount == 2ll){
+                // 头号通过向合约转账0.0002EOS获得头号奖金
                 claim_reward(from);
             } else if(quantity.amount == 3ll){
+                // 头号通过向合约转账0.0003EOS解除抵押，将消耗抵押代币的10%
                 unstake(from);
             } else if(memo == "deposit"){
+                // 通过向合约转账备注deposit存入EOS，用于购买预售额度，推荐码和生态接入
+                // 存入的EOS将分红给所有流通代币
+                // 购买推荐码将有机会获得新用户交易手续费的分红
                 deposit(from, quantity, memo);
             } else if(memo == "1d" || memo == "4d" || memo == "7d") {
+                // 通过向合约转账0.005 - 1 EOS并且备注1d/4d/7d为合约租赁CPU
                 eosio_assert(quantity.amount >= 50ll && quantity.amount <= _UNIT, "租用CPU的EOS区间是 0.005 - 1 EOS");
                 action(
                     permission_level{_self, N(active)},
@@ -151,9 +159,11 @@ public:
                 eosio_assert( now() >= _GAME_INIT_TIME, "游戏还没有开始");
                 if( now() < _GAME_PRESALE_TIME ){
                     auto user_itr = users.find(from);
+                    // 预售结束前可以通过存入EOS获得等量的预售额度（如果不参与预售将作为推荐码），存入的EOS对全部流通代币分红，不可退回。相当于两倍的价格参与预售
                     if(user_itr == users.end() || quantity.amount > user_itr->refer * _UNIT + user_itr->invitation * _UNIT){
                         eosio_assert( quantity.amount >= _UNIT && quantity.amount <= _MAX_IN_PRESALE, "预售份额不足，存入EOS获得等量不受限的份额（不能退回）或者单次购买 1 - 10 EOS");
                     } else if(quantity.amount > 10 * 10000ll) {
+                        // 超出10EOS的部分将从预售额度里面扣除，并且优先扣除邀请获得的额度
                         asset quota = quantity;
                         quota -= asset(_MAX_IN_PRESALE, CORE_SYMBOL);
                         if(user_itr->invitation * _UNIT >= quota.amount){
@@ -178,6 +188,7 @@ public:
             if(memo == "burn"){
                 burn(from, quantity, memo);
             } else if(memo == "stake"){
+                // 通过向合约转账足够的CGT并且备注stake竞争头号
                 stake(from, quantity, memo);
             } else {
                 sell(from, quantity, memo);
@@ -546,10 +557,12 @@ public:
             user_itr = users.find(account);
         }
         if(account == game_itr->player_one){
+            // 当前是头号的用户可以无缝增加抵押代币，稳住头号的位置
             _game.modify(game_itr, 0 , [&](auto& g){
                 g.staked += quantity;
             });
         } else if(quantity > game_itr->staked){
+            // 取代当前的头号的位置，并且奖励周期刷新
             unstake(game_itr->player_one);
             _game.modify(game_itr, 0 , [&](auto& g){
                 g.staked = quantity;
@@ -570,6 +583,7 @@ public:
             g.player_one = FEE_ACCOUNT;
         });
         if(staked >= asset(1000 * 10000ll, GAME_SYMBOL)){
+            // 争取头号的用户将有10%的抵押代币作为手续费，解除抵押的时候收取
             asset fee = staked / 10;
             staked -= fee;
             _game.modify(game_itr, 0, [&](auto& g) {
@@ -616,6 +630,7 @@ public:
         auto game_itr = _game.begin();
         eosio_assert(game_itr->player_one == account, "only player one can claim the reward");
         asset reward = game_itr->reward;
+        // 每一个奖励周期（24小时），头号都能够获得手续费奖池的10%，前提是发送金额大于10EOS
         reward.amount = reward.amount / 10;
         if( now() >= game_itr->reward_time && reward >= asset(10 * 10000ll, CORE_SYMBOL)){
             _game.modify(game_itr, 0, [&](auto& g){
@@ -638,7 +653,9 @@ public:
         auto parent = string_to_name(parent_str.c_str());
         auto parent_itr = users.find(parent);
         auto game_itr = _game.begin();
+        //新用户缺失推荐人的情况下将均匀分配到购买了推荐码的用户
         if(parent_itr == users.end() || parent_itr->refer <= 0 || account == parent){
+            //如果没有用户购买推荐码，新用户的上级将默认分配到FEE_ACCOUNT，否则按照推荐人队列依次分配
             parent = FEE_ACCOUNT;
             parent_itr = users.find(FEE_ACCOUNT);
             auto next_refer_itr = users.find(game_itr->next_refer);
@@ -672,6 +689,7 @@ public:
             }
         }
 
+        //分配到推荐码的新用户交易手续费减少50%
         if(parent_itr->refer > 0){
             discount = 1;
             users.modify(parent_itr, ram_payer, [&](auto& u){
@@ -688,7 +706,9 @@ public:
     }
 
     void collect_fee(account_name account, asset fee){
+        //推荐人奖励累积到合约，统一赎回
         if (fee.amount > 0){
+             //推荐人奖励金池与主奖金池隔离
             auto game_itr = _game.begin();
             _game.modify(game_itr, account, [&](auto& g){
                 g.fee += fee;
@@ -702,6 +722,7 @@ public:
             if(user_itr == users.end()) return;
             auto parent_itr = users.find(user_itr->parent);
             if(parent_itr == users.end()) return;
+            //推荐人奖励回馈直接上级50%
             users.modify(parent_itr, account, [&](auto& u){
                 u.reward += fee;
             });
@@ -710,6 +731,7 @@ public:
             {
                 parent_itr = users.find(parent_itr->parent);
                 if(parent_itr == users.end()) return;
+                //推荐人奖励二级回馈50%
                 users.modify(parent_itr, account, [&](auto& u){
                     u.reward += refer_fee;
                 });
@@ -720,15 +742,18 @@ public:
     void claim_fee(account_name account){
         auto user_itr = users.find(account);
         if(user_itr == users.end()) return;
+        //推荐人奖励累积到1EOS以上才能够赎回
         if(user_itr->reward > asset(10000ll, CORE_SYMBOL)){
             asset reward = user_itr->reward;
             users.modify(user_itr, account, [&](auto& u){
                 u.reward = asset(0, CORE_SYMBOL);
             });
+            //推荐人奖励金池与主奖金池隔离
             auto game_itr = _game.begin();
             _game.modify(game_itr, account, [&](auto& g){
                 g.fee -= reward;
             });
+            //推荐人奖励金池与主奖金池隔离
             eosio_assert(game_itr->fee >= asset(0, CORE_SYMBOL), "shit happens");
             action(
                 permission_level{_self, N(active)},
