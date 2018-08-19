@@ -138,6 +138,8 @@ public:
                 }
             } else if(quantity.amount == 2ll){
                 // 头号通过向合约转账0.0002EOS获得头号奖金
+                // 奖励冷却时间是24小时，每次获得头号奖金池的10%，单次奖金得超过10EOS
+                // 如果头号位置更替，奖励冷却时间将重置
                 claim_reward(from);
             } else if(quantity.amount == 3ll){
                 // 头号通过向合约转账0.0003EOS解除抵押，将消耗抵押CGT的10%
