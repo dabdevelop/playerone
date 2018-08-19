@@ -87,14 +87,16 @@ done
 # cleos transfer playeronefee oneplayerone "0.0001 EOS" "test" -p playeronefee
 
 # cleos push action playeroneiss transfer '["testuseraaaa", "oneplayerone", "100.0000 CGT", "stake"]' -p testuseraaaa
+# cleos push action playeroneiss transfer '["testuseraaaj", "oneplayerone", "1000.0000 CGT", "stake"]' -p testuseraaaj
 # cleos transfer testuseraaaa oneplayerone "0.0001 EOS" "test" -p testuseraaaa
 # cleos transfer testuseraaai oneplayerone "0.0001 EOS" "test" -p testuseraaai
 
-cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "0.0001 EOS", "testuseraaaj"]' -p testuseraaaa
+# cleos push action eosio.token transfer '["testuseraaaa", "oneplayerone", "0.0001 EOS", "testuseraaaj"]' -p testuseraaaa
 
 cleos get table oneplayerone oneplayerone users
 cleos get table oneplayerone oneplayerone refers
 cleos get table oneplayerone oneplayerone game
+cleos get table oneplayerone oneplayerone invitations
 echo cleos get currency balance playeroneiss oneplayerone CGT
 cleos get currency balance playeroneiss oneplayerone CGT
 echo cleos get currency balance playeroneiss blackholeeos CGT

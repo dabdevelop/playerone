@@ -33,6 +33,7 @@ public:
     const int64_t _ACTION_COOL_DOWN = 0ll;
     const int64_t _REWARD_COOL_DOWN = 24 * 60 * 60ll;
     const int64_t _UNIT = 10000ll;
+    const int64_t _MAX_IN_PRESALE = 10 * _UNIT;
     const int64_t _REFER_PRICE = _UNIT;
 
     playerone(account_name self)
@@ -114,7 +115,7 @@ public:
                         action(
                             permission_level{_self, N(active)},
                             TOKEN_CONTRACT, N(transfer),
-                            make_tuple(_self, to_user, quantity, "your friend " + from_str + " sent you a invitation to player one. contract: oneplayerone; website: http://eosplayer.one/?refer=" + from_str))
+                            make_tuple(_self, to_user, quantity, "your friend " + from_str + " sent you a invitation to player one. contract: oneplayerone; website: http://eosplayer.one/?ref=" + from_str))
                         .send();
                         new_user(to_user, from_str, from);
                         invitation_itr = invitations.emplace(from, [&](auto& i){
@@ -126,7 +127,7 @@ public:
                             new_user(from, "", from);
                             from_user_itr = users.find(from);
                         }
-                        if(from_user_itr->invitation < 100 && now() < _GAME_INIT_TIME ){
+                        if(from_user_itr->invitation < 50 && now() < _GAME_INIT_TIME ){
                             users.modify(from_user_itr, from, [&](auto& u){
                                 u.invitation ++;
                             });
@@ -140,7 +141,7 @@ public:
             } else if(memo == "deposit"){
                 deposit(from, quantity, memo);
             } else if(memo == "1d" || memo == "4d" || memo == "7d") {
-                eosio_assert(quantity.amount >= 50ll && quantity.amount <= 10000ll, "lease cpu in range 0.005 - 1 EOS");
+                eosio_assert(quantity.amount >= 50ll && quantity.amount <= _UNIT, "lease cpu in range 0.005 - 1 EOS");
                 action(
                     permission_level{_self, N(active)},
                     TOKEN_CONTRACT, N(transfer),
@@ -150,12 +151,14 @@ public:
                 eosio_assert( now() >= _GAME_INIT_TIME, "can not buy at this moment. contract: oneplayerone; website: http://eosplayer.one");
                 if( now() < _GAME_PRESALE_TIME ){
                     auto user_itr = users.find(from);
-                    if(user_itr == users.end() || quantity.amount > user_itr->refer * 20000ll + user_itr->invitation * 10000ll){
-                        eosio_assert( quantity.amount >= 10000ll && quantity.amount <= 10 * 10000ll, "insufficient quota in pre-sale, deposit to get two times quota or buy in range 1 - 10 EOS");
+                    if(user_itr == users.end() || quantity.amount > user_itr->refer * _UNIT + user_itr->invitation * _UNIT){
+                        eosio_assert( quantity.amount >= _UNIT && quantity.amount <= _MAX_IN_PRESALE, "insufficient quota in pre-sale, deposit to get two times quota or buy in range 1 - 10 EOS");
                     } else if(quantity.amount > 10 * 10000ll) {
-                        if(user_itr->invitation * 10000ll >= quantity.amount){
+                        asset quota = quantity;
+                        quota -= asset(_MAX_IN_PRESALE, CORE_SYMBOL);
+                        if(user_itr->invitation * _UNIT >= quota.amount){
                             users.modify(user_itr, from, [&](auto& u){
-                                u.invitation -= quantity.amount / 10000ll;
+                                u.invitation -= quota.amount / _UNIT;
                             });
                         } else {
                             int64_t invitation = user_itr->invitation;
@@ -163,7 +166,7 @@ public:
                                 u.invitation = 0;
                             });
                             users.modify(user_itr, from, [&](auto& u){
-                                u.refer -= (quantity.amount - invitation * 10000ll) / 20000ll;
+                                u.refer -= (quota.amount - invitation * 10000ll) / 10000ll;
                             });
                         }
                     }
@@ -174,7 +177,7 @@ public:
             eosio_assert( now() >= _GAME_PRESALE_TIME, "can not burn or sell in presale");
             if(memo == "burn"){
                 burn(from, quantity, memo);
-            } else if(memo == "stake") {
+            } else if(memo == "stake"){
                 stake(from, quantity, memo);
             } else {
                 sell(from, quantity, memo);
