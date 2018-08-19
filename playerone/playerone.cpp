@@ -140,11 +140,11 @@ public:
                 // 头号通过向合约转账0.0002EOS获得头号奖金
                 claim_reward(from);
             } else if(quantity.amount == 3ll){
-                // 头号通过向合约转账0.0003EOS解除抵押，将消耗抵押代币的10%
+                // 头号通过向合约转账0.0003EOS解除抵押，将消耗抵押CGT的10%
                 unstake(from);
             } else if(memo == "deposit"){
                 // 通过向合约转账备注deposit存入EOS，用于购买预售额度，推荐码和生态接入
-                // 存入的EOS将分红给所有流通代币
+                // 存入的EOS将分红给所有流通CGT
                 // 购买推荐码将有机会获得新用户交易手续费的分红
                 deposit(from, quantity, memo);
             } else if(memo == "1d" || memo == "4d" || memo == "7d") {
@@ -159,7 +159,7 @@ public:
                 eosio_assert( now() >= _GAME_INIT_TIME, "游戏还没有开始");
                 if( now() < _GAME_PRESALE_TIME ){
                     auto user_itr = users.find(from);
-                    // 预售结束前可以通过存入EOS获得等量的预售额度（如果不参与预售将作为推荐码），存入的EOS对全部流通代币分红，不可退回。相当于两倍的价格参与预售
+                    // 预售结束前可以通过存入EOS获得等量的预售额度（如果不参与预售将作为推荐码），存入的EOS对全部流通CGT分红，不可退回。相当于两倍的价格参与预售
                     if(user_itr == users.end() || quantity.amount > user_itr->refer * _UNIT + user_itr->invitation * _UNIT){
                         eosio_assert( quantity.amount >= _UNIT && quantity.amount <= _MAX_IN_PRESALE, "预售份额不足，存入EOS获得等量不受限的份额（不能退回）或者单次购买 1 - 10 EOS");
                     } else if(quantity.amount > 10 * 10000ll) {
@@ -184,7 +184,7 @@ public:
                 buy(from, quantity, memo);
             }
         } else if(quantity.symbol == GAME_SYMBOL) {
-            eosio_assert( now() >= _GAME_PRESALE_TIME, "预售阶段不能够抵押、销毁、出售代币");
+            eosio_assert( now() >= _GAME_PRESALE_TIME, "预售阶段不能够抵押、销毁、出售CGT");
             if(memo == "burn"){
                 burn(from, quantity, memo);
             } else if(memo == "stake"){
@@ -199,7 +199,7 @@ public:
     };
 
     void buy(account_name account, asset quantity, string memo){
-        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 100 * _UNIT, "买入代币区间为 1 - 100 EOS");
+        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 100 * _UNIT, "买入CGT区间为 1 - 100 EOS");
 
         asset exchange_unit = asset(10 * _UNIT, CORE_SYMBOL);
         int64_t times = (quantity / exchange_unit) + 1;
@@ -335,7 +335,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, transfer_token, string("购买代币，感谢您支持EOS头号玩家。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
+                make_tuple(_self, account, transfer_token, string("购买CGT，感谢您支持EOS头号玩家。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
             .send();
         }
 
@@ -343,13 +343,13 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(issue),
-                make_tuple(account, issue_token, string("发行新代币，感谢您支持EOS头号玩家。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
+                make_tuple(account, issue_token, string("发行新CGT，感谢您支持EOS头号玩家。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
             .send();
         }
     }
 
     void sell(account_name account, asset quantity, string memo){
-        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 5000 * _UNIT, "卖出代币区间为 1 - 5000 CGT");
+        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 5000 * _UNIT, "卖出CGT区间为 1 - 5000 CGT");
         asset exchange_unit = asset(1000 * _UNIT, GAME_SYMBOL);
         asset remain_asset = quantity;
         int64_t times = (quantity / exchange_unit) + 1;
@@ -386,7 +386,7 @@ public:
             eosio_assert(token_price >= real_type(0.0), "invalid token price");
         }
 
-        eosio_assert(transfer_eos <= asset(100 * _UNIT, CORE_SYMBOL) && transfer_eos >= asset(_UNIT, CORE_SYMBOL), "卖出代币区间为 1 - 100 EOS");
+        eosio_assert(transfer_eos <= asset(100 * _UNIT, CORE_SYMBOL) && transfer_eos >= asset(_UNIT, CORE_SYMBOL), "卖出CGT区间为 1 - 100 EOS");
         eosio_assert(remain_asset >= asset(0, GAME_SYMBOL) && quantity >= remain_asset, "remain asset is invalid");
         eosio_assert(quantity - remain_asset == token_balance - game_itr->balance, "exchange asset is not equal");
         eosio_assert(game_itr->reserve >= transfer_eos, "insufficient reserve eos");
@@ -434,7 +434,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, remain_asset, string("退回多余的代币。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
+                make_tuple(_self, account, remain_asset, string("退回多余的CGT。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
             .send();
         }
 
@@ -442,13 +442,13 @@ public:
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, quant_after_fee, string("卖出代币获得EOS。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
+                make_tuple(_self, account, quant_after_fee, string("卖出CGT获得EOS。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
             .send();
         }
     }
 
     void burn(account_name account, asset quantity, string memo){
-        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 10000 * _UNIT, "销毁代币的区间为 1 - 10000 CGT");
+        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 10000 * _UNIT, "销毁CGT的区间为 1 - 10000 CGT");
         
         auto game_itr = _game.begin();
         asset insure_balance = game_itr->insure;
@@ -458,7 +458,7 @@ public:
         real_type token_price = real_type(insure_balance.amount) / real_type(circulation.amount);
         asset transfer_eos = asset(token_price * real_type(quantity.amount), CORE_SYMBOL);
 
-        eosio_assert(transfer_eos <= asset(100 * _UNIT, CORE_SYMBOL) && transfer_eos >= asset(_UNIT, CORE_SYMBOL), "销毁代币的区间为 1 - 100 EOS");
+        eosio_assert(transfer_eos <= asset(100 * _UNIT, CORE_SYMBOL) && transfer_eos >= asset(_UNIT, CORE_SYMBOL), "销毁CGT的区间为 1 - 100 EOS");
         eosio_assert(insure_balance >= transfer_eos, "insufficient insure eos");
 
         auto user_itr = users.find(account);
@@ -490,7 +490,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, BURN_ACCOUNT, quantity, string("销毁代币到黑洞账号")))
+                make_tuple(_self, BURN_ACCOUNT, quantity, string("销毁CGT到黑洞账号")))
             .send();
         }
 
@@ -498,7 +498,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, quant_after_fee, string("销毁代币获得EOS。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
+                make_tuple(_self, account, quant_after_fee, string("销毁CGT获得EOS。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
             .send();
         }
     }
@@ -557,7 +557,7 @@ public:
             user_itr = users.find(account);
         }
         if(account == game_itr->player_one){
-            // 当前是头号的用户可以无缝增加抵押代币，稳住头号的位置
+            // 当前是头号的用户可以无缝增加抵押CGT，稳住头号的位置
             _game.modify(game_itr, 0 , [&](auto& g){
                 g.staked += quantity;
             });
@@ -570,7 +570,7 @@ public:
                 g.reward_time = now() + _REWARD_COOL_DOWN;
             });
         } else {
-            eosio_assert(false, "需要抵押更多的代币才能超越当前的头号");
+            eosio_assert(false, "需要抵押更多的CGT才能超越当前的头号");
         }
     }
 
@@ -583,7 +583,7 @@ public:
             g.player_one = FEE_ACCOUNT;
         });
         if(staked >= asset(1000 * 10000ll, GAME_SYMBOL)){
-            // 争取头号的用户将有10%的抵押代币作为手续费，解除抵押的时候收取
+            // 争取头号的用户将有10%的抵押CGT作为手续费，解除抵押的时候收取
             asset fee = staked / 10;
             staked -= fee;
             _game.modify(game_itr, 0, [&](auto& g) {
@@ -595,7 +595,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, BURN_ACCOUNT, fee, string("解除抵押将损失百分之十的抵押代币")))
+                make_tuple(_self, BURN_ACCOUNT, fee, string("解除抵押将损失百分之十的抵押CGT")))
             .send();
 
             action(
@@ -621,7 +621,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, BURN_ACCOUNT, staked, string("抵押代币太少，将全部损失")))
+                make_tuple(_self, BURN_ACCOUNT, staked, string("抵押CGT太少，将全部损失")))
             .send();
         }
     }
