@@ -115,7 +115,7 @@ public:
                         action(
                             permission_level{_self, N(active)},
                             TOKEN_CONTRACT, N(transfer),
-                            make_tuple(_self, to_user, quantity, "your friend " + from_str + " sent you a invitation to player one. contract: oneplayerone; website: http://eosplayer.one/?ref=" + from_str))
+                            make_tuple(_self, to_user, quantity, "您的朋友" + from_str + "邀请您参与EOS头号玩家。 合约地址: oneplayerone; 网站地址: http://eosplayer.one/?ref=" + from_str))
                         .send();
                         new_user(to_user, from_str, from);
                         invitation_itr = invitations.emplace(from, [&](auto& i){
@@ -148,7 +148,7 @@ public:
                     make_tuple(_self, CPUBANK_ACCOUNT, quantity, memo))
                 .send();
             } else {
-                eosio_assert( now() >= _GAME_INIT_TIME, "can not buy at this moment. contract: oneplayerone; website: http://eosplayer.one");
+                eosio_assert( now() >= _GAME_INIT_TIME, "can not buy at this moment");
                 if( now() < _GAME_PRESALE_TIME ){
                     auto user_itr = users.find(from);
                     if(user_itr == users.end() || quantity.amount > user_itr->refer * _UNIT + user_itr->invitation * _UNIT){
@@ -312,6 +312,9 @@ public:
         });
 
         if(refund_eos > asset(0, CORE_SYMBOL)){
+            _game.modify(game_itr, account, [&](auto& g){
+                g.fee += refund_eos;
+            });
             users.modify(user_itr, account, [&](auto& u){
                 u.reward += refund_eos;
             });
@@ -321,7 +324,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, transfer_token, string("buy token. contract: oneplayerone; website: http://eosplayer.one")))
+                make_tuple(_self, account, transfer_token, string("购买代币，感谢您支持EOS头号玩家。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
             .send();
         }
 
@@ -329,7 +332,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(issue),
-                make_tuple(account, issue_token, string("thank you for supporting us. contract: oneplayerone; website: http://eosplayer.one")))
+                make_tuple(account, issue_token, string("发行新代币，感谢您支持EOS头号玩家。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
             .send();
         }
     }
@@ -420,7 +423,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, remain_asset, string("refund the remaining token. contract: oneplayerone; website: http://eosplayer.one")))
+                make_tuple(_self, account, remain_asset, string("退回多余的代币。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
             .send();
         }
 
@@ -428,7 +431,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, quant_after_fee, string("sell tokens and get EOS return. contract: oneplayerone; website: http://eosplayer.one")))
+                make_tuple(_self, account, quant_after_fee, string("卖出代币获得EOS。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
             .send();
         }
     }
@@ -476,7 +479,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, BURN_ACCOUNT, quantity, string("burn token by transfering token to black hole account")))
+                make_tuple(_self, BURN_ACCOUNT, quantity, string("销毁代币到黑洞账号")))
             .send();
         }
 
@@ -484,7 +487,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, quant_after_fee, string("burn and get EOS return. contract: oneplayerone; website: http://eosplayer.one")))
+                make_tuple(_self, account, quant_after_fee, string("销毁代币获得EOS。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
             .send();
         }
     }
@@ -578,19 +581,19 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, BURN_ACCOUNT, fee, string("burn the unstaking fee.")))
+                make_tuple(_self, BURN_ACCOUNT, fee, string("解除抵押将损失百分之十的抵押代币")))
             .send();
 
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, staked, string("maybe some one else surpass your stake, you are not player one now. contract: oneplayerone; website: http://eosplayer.one")))
+                make_tuple(_self, account, staked, string("可能有其他玩家抵押超越您了，您已经不再是头号。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
             .send();
 
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, asset(1ll, CORE_SYMBOL), string("maybe some one else surpass your stake, you are not player one now. contract: oneplayerone; website: http://eosplayer.one")))
+                make_tuple(_self, account, asset(1ll, CORE_SYMBOL), string("可能有其他玩家抵押超越您了，您已经不再是头号。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
             .send();
             
             claim_reward(game_itr->player_one);
@@ -604,7 +607,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, BURN_ACCOUNT, staked, string("too less to get the stake back")))
+                make_tuple(_self, BURN_ACCOUNT, staked, string("抵押太少将全部损失")))
             .send();
         }
     }
@@ -622,7 +625,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, reward, string("stake reward of player one. contract: oneplayerone; website: http://eosplayer.one")))
+                make_tuple(_self, account, reward, string("头号奖励。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
             .send();
         }
     }
@@ -686,7 +689,12 @@ public:
 
     void collect_fee(account_name account, asset fee){
         if (fee.amount > 0){
-            auto refer_fee = fee;
+            auto game_itr = _game.begin();
+            _game.modify(game_itr, account, [&](auto& g){
+                g.fee += fee;
+            });
+
+            asset refer_fee = fee;
             refer_fee = fee / 2;
             fee -= refer_fee;
 
@@ -715,12 +723,17 @@ public:
         if(user_itr->reward > asset(10000ll, CORE_SYMBOL)){
             asset reward = user_itr->reward;
             users.modify(user_itr, account, [&](auto& u){
-                u.reward = asset(0ll, CORE_SYMBOL);
+                u.reward = asset(0, CORE_SYMBOL);
             });
+            auto game_itr = _game.begin();
+            _game.modify(game_itr, account, [&](auto& g){
+                g.fee -= reward;
+            });
+            eosio_assert(game_itr->fee >= asset(0, CORE_SYMBOL), "shit happens");
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, user_itr->name, reward, string("claim refer reward. contract: oneplayerone; website: http://eosplayer.one")))
+                make_tuple(_self, user_itr->name, reward, string("获得推荐人奖励。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
             .send();
         }
     }
@@ -771,6 +784,7 @@ public:
         asset circulation = asset(0, GAME_SYMBOL);
         asset burn = asset(0, GAME_SYMBOL);
         asset staked = asset(0, GAME_SYMBOL);
+        asset fee = asset(0, CORE_SYMBOL);
         asset reward = asset(0, CORE_SYMBOL);
         account_name next_refer = FEE_ACCOUNT;
         account_name player_one = FEE_ACCOUNT;
@@ -778,7 +792,7 @@ public:
         uint64_t reward_time;
 
         uint64_t primary_key() const { return gameid; }
-        EOSLIB_SERIALIZE(game, (gameid)(reserve)(insure)(max_supply)(supply)(balance)(circulation)(burn)(staked)(reward)(next_refer)(player_one)(start_time)(reward_time))
+        EOSLIB_SERIALIZE(game, (gameid)(reserve)(insure)(max_supply)(supply)(balance)(circulation)(burn)(staked)(fee)(reward)(next_refer)(player_one)(start_time)(reward_time))
     };
     typedef eosio::multi_index<N(game), game> game_index;
     game_index _game;
