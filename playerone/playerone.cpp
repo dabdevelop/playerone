@@ -115,7 +115,7 @@ public:
                         action(
                             permission_level{_self, N(active)},
                             TOKEN_CONTRACT, N(transfer),
-                            make_tuple(_self, to_user, quantity, "您的朋友" + from_str + "邀请您参与EOS头号玩家。 合约地址: oneplayerone; 网站地址: http://eosplayer.one/?ref=" + from_str))
+                            make_tuple(_self, to_user, quantity, "您的朋友" + from_str + "邀请您参与EOS头号玩家。 EOS头号玩家合约地址: oneplayerone; 网站地址: http://eosplayer.one/?ref=" + from_str))
                         .send();
                         new_user(to_user, from_str, from);
                         invitation_itr = invitations.emplace(from, [&](auto& i){
@@ -141,18 +141,18 @@ public:
             } else if(memo == "deposit"){
                 deposit(from, quantity, memo);
             } else if(memo == "1d" || memo == "4d" || memo == "7d") {
-                eosio_assert(quantity.amount >= 50ll && quantity.amount <= _UNIT, "lease cpu in range 0.005 - 1 EOS");
+                eosio_assert(quantity.amount >= 50ll && quantity.amount <= _UNIT, "租用CPU的EOS区间是 0.005 - 1 EOS");
                 action(
                     permission_level{_self, N(active)},
                     TOKEN_CONTRACT, N(transfer),
                     make_tuple(_self, CPUBANK_ACCOUNT, quantity, memo))
                 .send();
             } else {
-                eosio_assert( now() >= _GAME_INIT_TIME, "can not buy at this moment");
+                eosio_assert( now() >= _GAME_INIT_TIME, "游戏还没有开始");
                 if( now() < _GAME_PRESALE_TIME ){
                     auto user_itr = users.find(from);
                     if(user_itr == users.end() || quantity.amount > user_itr->refer * _UNIT + user_itr->invitation * _UNIT){
-                        eosio_assert( quantity.amount >= _UNIT && quantity.amount <= _MAX_IN_PRESALE, "insufficient quota in pre-sale, deposit to get two times quota or buy in range 1 - 10 EOS");
+                        eosio_assert( quantity.amount >= _UNIT && quantity.amount <= _MAX_IN_PRESALE, "预售份额不足，存入EOS获得等量不受限的份额（不能退回）或者单次购买 1 - 10 EOS");
                     } else if(quantity.amount > 10 * 10000ll) {
                         asset quota = quantity;
                         quota -= asset(_MAX_IN_PRESALE, CORE_SYMBOL);
@@ -174,7 +174,7 @@ public:
                 buy(from, quantity, memo);
             }
         } else if(quantity.symbol == GAME_SYMBOL) {
-            eosio_assert( now() >= _GAME_PRESALE_TIME, "can not burn or sell in presale");
+            eosio_assert( now() >= _GAME_PRESALE_TIME, "预售阶段不能够抵押、销毁、出售代币");
             if(memo == "burn"){
                 burn(from, quantity, memo);
             } else if(memo == "stake"){
@@ -183,12 +183,12 @@ public:
                 sell(from, quantity, memo);
             }
         } else {
-            eosio_assert(false, "do not send other funds to this contract");
+            eosio_assert(false, "不要转入其他代币资产");
         }
     };
 
     void buy(account_name account, asset quantity, string memo){
-        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 100 * _UNIT, "quantity must in range 1 - 100 EOS");
+        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 100 * _UNIT, "买入代币区间为 1 - 100 EOS");
 
         asset exchange_unit = asset(10 * _UNIT, CORE_SYMBOL);
         int64_t times = (quantity / exchange_unit) + 1;
@@ -203,7 +203,7 @@ public:
             user_itr = users.find(account);
         } else {
             uint64_t now_action = now();
-            eosio_assert( now_action >= user_itr->last_action + _ACTION_COOL_DOWN, "action needs to cool down");
+            eosio_assert( now_action >= user_itr->last_action + _ACTION_COOL_DOWN, "操作太频繁，需要冷却时间");
             if( now_action < _GAME_PRESALE_TIME){
                 now_action += 225ll / (now_action - user_itr->last_action + 1);
             }
@@ -338,7 +338,7 @@ public:
     }
 
     void sell(account_name account, asset quantity, string memo){
-        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 5000 * _UNIT, "quantity must in range 1 - 5000 CGT");
+        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 5000 * _UNIT, "卖出代币区间为 1 - 5000 CGT");
         asset exchange_unit = asset(1000 * _UNIT, GAME_SYMBOL);
         asset remain_asset = quantity;
         int64_t times = (quantity / exchange_unit) + 1;
@@ -375,7 +375,7 @@ public:
             eosio_assert(token_price >= real_type(0.0), "invalid token price");
         }
 
-        eosio_assert(transfer_eos <= asset(100 * _UNIT, CORE_SYMBOL) && transfer_eos >= asset(_UNIT, CORE_SYMBOL), "sell in range 1 - 100 eos");
+        eosio_assert(transfer_eos <= asset(100 * _UNIT, CORE_SYMBOL) && transfer_eos >= asset(_UNIT, CORE_SYMBOL), "卖出代币区间为 1 - 100 EOS");
         eosio_assert(remain_asset >= asset(0, GAME_SYMBOL) && quantity >= remain_asset, "remain asset is invalid");
         eosio_assert(quantity - remain_asset == token_balance - game_itr->balance, "exchange asset is not equal");
         eosio_assert(game_itr->reserve >= transfer_eos, "insufficient reserve eos");
@@ -385,7 +385,7 @@ public:
             new_user(account, memo, account);
             user_itr = users.find(account);
         } else {
-            eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "action needs to cool down");
+            eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "操作太频繁，需要冷却时间");
             users.modify(user_itr, account, [&](auto& u) {
                 u.last_action = now();
             });
@@ -437,7 +437,7 @@ public:
     }
 
     void burn(account_name account, asset quantity, string memo){
-        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 10000 * _UNIT, "quantity must in range 1 - 10000 CGT");
+        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 10000 * _UNIT, "销毁代币的区间为 1 - 10000 CGT");
         
         auto game_itr = _game.begin();
         asset insure_balance = game_itr->insure;
@@ -447,7 +447,7 @@ public:
         real_type token_price = real_type(insure_balance.amount) / real_type(circulation.amount);
         asset transfer_eos = asset(token_price * real_type(quantity.amount), CORE_SYMBOL);
 
-        eosio_assert(transfer_eos <= asset(100 * _UNIT, CORE_SYMBOL) && transfer_eos >= asset(_UNIT, CORE_SYMBOL), "burn in range 1 - 100 eos");
+        eosio_assert(transfer_eos <= asset(100 * _UNIT, CORE_SYMBOL) && transfer_eos >= asset(_UNIT, CORE_SYMBOL), "销毁代币的区间为 1 - 100 EOS");
         eosio_assert(insure_balance >= transfer_eos, "insufficient insure eos");
 
         auto user_itr = users.find(account);
@@ -455,7 +455,7 @@ public:
             new_user(account, memo, account);
             user_itr = users.find(account);
         } else {
-            eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "action needs to cool down");
+            eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "操作太频繁，需要冷却时间");
             users.modify(user_itr, account, [&](auto& u) {
                 u.last_action = now();
             });
@@ -557,7 +557,7 @@ public:
                 g.reward_time = now() + _REWARD_COOL_DOWN;
             });
         } else {
-            eosio_assert(false, "need stake more tokens to overcome current player one");
+            eosio_assert(false, "需要抵押更多的代币才能超越当前的头号");
         }
     }
 
@@ -607,7 +607,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, BURN_ACCOUNT, staked, string("抵押太少将全部损失")))
+                make_tuple(_self, BURN_ACCOUNT, staked, string("抵押代币太少，将全部损失")))
             .send();
         }
     }
