@@ -27,7 +27,7 @@ public:
     const int64_t _INITIAL_PRICE = 100ll;
     const int64_t _MAX_SUPPLY_TIMES = 10ll;
     //TODO set the time to future game init time
-    const int64_t _GAME_INIT_TIME = 1534582387ll;
+    const int64_t _GAME_INIT_TIME = 1534778499ll;
     const int64_t _GAME_PRESALE_TIME = _GAME_INIT_TIME + 60 * 60ll;
     //TODO 1 second to cool down
     const int64_t _ACTION_COOL_DOWN = 0ll;
@@ -39,7 +39,6 @@ public:
     playerone(account_name self)
         : contract(self), 
         _game(_self, _self),
-        users(_self, _self),
         refers(_self, _self),
         invitations(_self, _self)
     {
@@ -54,10 +53,11 @@ public:
                 g.reward_time = _GAME_PRESALE_TIME + _REWARD_COOL_DOWN;
             });
         }
-
-        auto user_itr = users.find(FEE_ACCOUNT);
-        if(user_itr == users.end()){
-            user_itr = users.emplace(_self, [&](auto& u){
+        user_table userinfo(_self, FEE_ACCOUNT);
+        auto user_itr = userinfo.find(game_itr->gameid);
+        if(user_itr == userinfo.end()){
+            user_itr = userinfo.emplace(_self, [&](auto& u){
+                u.gameid = game_itr->gameid;
                 u.name = FEE_ACCOUNT;
                 u.parent = FEE_ACCOUNT;
                 u.refer = 100;
@@ -102,6 +102,8 @@ public:
         }
         eosio_assert(quantity.is_valid(), "invalid token transfer");
 
+        auto game_itr = _game.begin();
+
         if(quantity.symbol == CORE_SYMBOL){
             if(quantity.amount == 1ll){
                 if(memo.size() <= 0 || memo.size() > 12){
@@ -112,8 +114,10 @@ public:
                     string from_str = name_to_string(from);
                     account_name to_user = string_to_name(memo.c_str());
                     auto invitation_itr = invitations.find(to_user);
-                    auto user_itr = users.find(to_user);
-                    if(invitation_itr == invitations.end() && user_itr == users.end()){
+                    user_table to_userinfo(_self, to_user);
+                    auto to_user_itr = to_userinfo.find(game_itr->gameid);
+                    // auto user_itr = userinfo.find(to_user);
+                    if(invitation_itr == invitations.end() && to_user_itr == to_userinfo.end()){
                         action(
                             permission_level{_self, N(active)},
                             TOKEN_CONTRACT, N(transfer),
@@ -124,13 +128,15 @@ public:
                             i.to = to_user;
                             i.from = from;
                         });
-                        auto from_user_itr = users.find(from);
-                        if(from_user_itr == users.end()){
+                        user_table from_userinfo(_self, from);
+                        auto from_user_itr = from_userinfo.find(game_itr->gameid);
+                        // auto from_user_itr = userinfo.find(from);
+                        if(from_user_itr == from_userinfo.end()){
                             new_user(from, "", from);
-                            from_user_itr = users.find(from);
+                            from_user_itr = from_userinfo.find(game_itr->gameid);
                         }
                         if(from_user_itr->invitation < 50 && now() < _GAME_INIT_TIME ){
-                            users.modify(from_user_itr, from, [&](auto& u){
+                            from_userinfo.modify(from_user_itr, from, [&](auto& u){
                                 u.invitation ++;
                             });
                         }
@@ -164,25 +170,27 @@ public:
             } else {
                 eosio_assert( now() >= _GAME_INIT_TIME, "游戏还没有开始");
                 if( now() < _GAME_PRESALE_TIME ){
-                    auto user_itr = users.find(from);
+                    user_table userinfo(_self, from);
+                    auto user_itr = userinfo.find(game_itr->gameid);
+                    // auto user_itr = userinfo.find(from);
                     // 预售结束前可以通过存入EOS获得等量的预售额度（如果不参与预售将作为推荐码），存入的EOS对全部流通CGT分红，不可退回。相当于两倍的价格参与预售
                     // 预售中每个地址会有平均15秒的操作冷却时间，两次操作时间间隔越短，下一次操作冷却时间越长，t = 225 / (dt + 1)，t为下一次操作时间，dt是前两次操作间隔时间。冷却时间预售之后降为1秒
-                    if(user_itr == users.end() || quantity.amount > user_itr->refer * _UNIT + user_itr->invitation * _UNIT){
+                    if(user_itr == userinfo.end() || quantity.amount > user_itr->refer * _UNIT + user_itr->invitation * _UNIT + _MAX_IN_PRESALE){
                         eosio_assert( quantity.amount >= _UNIT && quantity.amount <= _MAX_IN_PRESALE, "预售份额不足，存入EOS获得等量不受限的份额（不能退回）或者单次购买 1 - 10 EOS");
                     } else if(quantity.amount > 10 * _UNIT) {
                         // 超出10EOS的部分将从预售额度里面扣除，并且优先扣除邀请获得的额度
                         asset quota = quantity;
                         quota -= asset(_MAX_IN_PRESALE, CORE_SYMBOL);
                         if(user_itr->invitation * _UNIT >= quota.amount){
-                            users.modify(user_itr, from, [&](auto& u){
+                            userinfo.modify(user_itr, from, [&](auto& u){
                                 u.invitation -= quota.amount / _UNIT;
                             });
                         } else {
                             int64_t invitation = user_itr->invitation;
-                            users.modify(user_itr, from, [&](auto& u){
+                            userinfo.modify(user_itr, from, [&](auto& u){
                                 u.invitation = 0;
                             });
-                            users.modify(user_itr, from, [&](auto& u){
+                            userinfo.modify(user_itr, from, [&](auto& u){
                                 u.refer -= (quota.amount - invitation * _UNIT) / _UNIT;
                             });
                         }
@@ -214,18 +222,20 @@ public:
         asset insured_eos = asset(0, CORE_SYMBOL);
         asset exchanged_eos = asset(0, CORE_SYMBOL);
         asset issued_eos = asset(0, CORE_SYMBOL);
-
-        auto user_itr = users.find(account);
-        if(user_itr == users.end()){
+        auto game_itr = _game.begin();
+        user_table userinfo(_self, account);
+        auto user_itr = userinfo.find(game_itr->gameid);
+        // auto user_itr = userinfo.find(account);
+        if(user_itr == userinfo.end()){
             new_user(account, memo, account);
-            user_itr = users.find(account);
+            user_itr = userinfo.find(game_itr->gameid);
         } else {
             uint64_t now_action = now();
             eosio_assert( now_action >= user_itr->last_action + _ACTION_COOL_DOWN, "操作太频繁，需要时间冷却");
             if( now_action < _GAME_PRESALE_TIME){
                 now_action += 225ll / (now_action - user_itr->last_action + 1);
             }
-            users.modify(user_itr, account, [&](auto& u) {
+            userinfo.modify(user_itr, account, [&](auto& u) {
                 u.last_action = now_action;
             });
         }    
@@ -251,7 +261,6 @@ public:
         asset remain_eos = quant_after_fee;
         asset transfer_token = asset(0, GAME_SYMBOL);
         asset issue_token = asset(0, GAME_SYMBOL);
-        auto game_itr = _game.begin();
         asset reserve_balance = game_itr->reserve;
         asset token_supply = game_itr->supply;
         asset token_balance = game_itr->balance;
@@ -333,7 +342,7 @@ public:
             _game.modify(game_itr, account, [&](auto& g){
                 g.fee += refund_eos;
             });
-            users.modify(user_itr, account, [&](auto& u){
+            userinfo.modify(user_itr, account, [&](auto& u){
                 u.reward += refund_eos;
             });
         }
@@ -398,13 +407,15 @@ public:
         eosio_assert(quantity - remain_asset == token_balance - game_itr->balance, "exchange asset is not equal");
         eosio_assert(game_itr->reserve >= transfer_eos, "insufficient reserve eos");
 
-        auto user_itr = users.find(account);
-        if(user_itr == users.end()){
+        user_table userinfo(_self, account);
+        auto user_itr = userinfo.find(game_itr->gameid);
+        // auto user_itr = userinfo.find(account);
+        if(user_itr == userinfo.end()){
             new_user(account, memo, account);
-            user_itr = users.find(account);
+            user_itr = userinfo.find(game_itr->gameid);
         } else {
             eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "操作太频繁，需要时间冷却");
-            users.modify(user_itr, account, [&](auto& u) {
+            userinfo.modify(user_itr, account, [&](auto& u) {
                 u.last_action = now();
             });
         }
@@ -468,13 +479,15 @@ public:
         eosio_assert(transfer_eos <= asset(100 * _UNIT, CORE_SYMBOL) && transfer_eos >= asset(_UNIT, CORE_SYMBOL), "销毁CGT的区间为 1 - 100 EOS");
         eosio_assert(insure_balance >= transfer_eos, "insufficient insure eos");
 
-        auto user_itr = users.find(account);
-        if(user_itr == users.end()){
+        user_table userinfo(_self, account);
+        auto user_itr = userinfo.find(game_itr->gameid);
+        // auto user_itr = userinfo.find(account);
+        if(user_itr == userinfo.end()){
             new_user(account, memo, account);
-            user_itr = users.find(account);
+            user_itr = userinfo.find(game_itr->gameid);
         } else {
             eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "操作太频繁，需要时间冷却");
-            users.modify(user_itr, account, [&](auto& u) {
+            userinfo.modify(user_itr, account, [&](auto& u) {
                 u.last_action = now();
             });
         }
@@ -512,21 +525,24 @@ public:
 
     void deposit(account_name account, asset quantity, string memo){
         auto game_itr = _game.begin();
-        auto user_itr = users.find(account);
-        auto fee_itr = users.find(FEE_ACCOUNT);
+        user_table userinfo(_self, account);
+        auto user_itr = userinfo.find(game_itr->gameid);
+        // auto user_itr = userinfo.find(account);
+        user_table fee_userinfo(_self, FEE_ACCOUNT);
+        auto fee_itr = fee_userinfo.find(game_itr->gameid);
         if(quantity.amount >= _REFER_PRICE / 2){
-            if(user_itr == users.end()){
+            if(user_itr == userinfo.end()){
                 new_user(account, memo, account);
-                user_itr = users.find(account);
+                user_itr = userinfo.find(game_itr->gameid);
             }
             if(quantity.amount >= _REFER_PRICE){
-                if(user_itr != users.end()){
+                if(user_itr != userinfo.end()){
                     uint64_t refer = quantity.amount / _REFER_PRICE;
-                    users.modify(user_itr, account, [&](auto& u) {
+                    userinfo.modify(user_itr, account, [&](auto& u) {
                         u.refer += refer;
                     });
 
-                    users.modify(fee_itr, account, [&](auto& u) {
+                    fee_userinfo.modify(fee_itr, account, [&](auto& u) {
                         u.refer += refer;
                     });
                 }
@@ -542,8 +558,11 @@ public:
                         r.name = FEE_ACCOUNT;
                     });
                 }
-                auto next_refer_itr = users.find(game_itr->next_refer);
-                if(next_refer_itr == users.end()){
+
+                user_table next_referinfo(_self, game_itr->next_refer);
+                auto next_refer_itr = next_referinfo.find(game_itr->gameid);
+                // auto next_refer_itr = userinfo.find(game_itr->next_refer);
+                if(next_refer_itr == next_referinfo.end()){
                     _game.modify(game_itr, 0, [&](auto& g){
                         g.next_refer = account;
                     });
@@ -566,10 +585,12 @@ public:
 
     void stake(account_name account, asset quantity, string memo){
         auto game_itr = _game.begin();
-        auto user_itr = users.find(account);
-        if(user_itr == users.end()){
+        user_table userinfo(_self, account);
+        auto user_itr = userinfo.find(game_itr->gameid);
+        // auto user_itr = userinfo.find(account);
+        if(user_itr == userinfo.end()){
             new_user(account, memo, account);
-            user_itr = users.find(account);
+            user_itr = userinfo.find(game_itr->gameid);
         }
         if(account == game_itr->player_one){
             // 当前是头号的用户可以无缝增加抵押CGT，稳住头号的位置
@@ -661,26 +682,37 @@ public:
     }
 
     void new_user(account_name account, string parent_str, account_name ram_payer){
-        auto user_itr = users.find(account);
-        if(user_itr != users.end()) return;
+        auto game_itr = _game.begin();
+        user_table userinfo(_self, account);
+        auto user_itr = userinfo.find(game_itr->gameid);
+        // auto user_itr = userinfo.find(account);
+        if(user_itr != userinfo.end()) return;
 
         uint32_t discount = 0;
         auto parent = string_to_name(parent_str.c_str());
-        auto parent_itr = users.find(parent);
-        auto game_itr = _game.begin();
+        user_table parentinfo(_self, parent);
+        auto parent_itr = parentinfo.find(game_itr->gameid);
+        // auto parent_itr = userinfo.find(parent);
         //新用户缺失推荐人的情况下将均匀分配到购买了推荐码的用户
-        if(parent_itr == users.end() || parent_itr->refer <= 0 || account == parent){
+        if(parent_itr == parentinfo.end() || parent_itr->refer <= 0 || account == parent){
             //如果没有用户购买推荐码，新用户的上级将默认分配到FEE_ACCOUNT，否则按照推荐人队列依次分配
             parent = FEE_ACCOUNT;
-            parent_itr = users.find(FEE_ACCOUNT);
-            auto next_refer_itr = users.find(game_itr->next_refer);
-            if(refers.begin() != refers.end() && next_refer_itr != users.end()){
+            user_table fee_userinfo(_self, FEE_ACCOUNT);
+            // parent_itr = fee_userinfo.find(game_itr->gameid);
+            // parent_itr = userinfo.find(FEE_ACCOUNT);
+            user_table next_referinfo(_self, game_itr->next_refer);
+            auto next_refer_itr = next_referinfo.find(game_itr->gameid);
+            // auto next_refer_itr = userinfo.find(game_itr->next_refer);
+            if(refers.begin() != refers.end() && next_refer_itr != next_referinfo.end()){
                 auto refer_itr = refers.find(game_itr->next_refer);
                 if(refer_itr != refers.end()){
-                    auto refer_user_itr = users.find(refer_itr->name);
-                    if(refer_user_itr != users.end()){
+                    user_table refer_userinfo(_self, refer_itr->name);
+                    auto refer_user_itr = refer_userinfo.find(game_itr->gameid);
+                    // auto refer_user_itr = userinfo.find(refer_itr->name);
+                    if(refer_user_itr != refer_userinfo.end()){
                         parent = refer_user_itr->name;
-                        parent_itr = users.find(refer_user_itr->name);
+                        // parent_itr = refer_user_itr;
+                        // parent_itr = userinfo.find(refer_user_itr->name);
                         if(refer_user_itr->refer <= 1){
                             refer_itr = refers.erase(refer_itr);
                         } else {
@@ -707,12 +739,15 @@ public:
         //分配到推荐码的新用户交易手续费减少50%
         if(parent_itr->refer > 0){
             discount = 1;
-            users.modify(parent_itr, ram_payer, [&](auto& u){
+            user_table parent_info(_self, parent);
+            parent_itr = parent_info.find(game_itr->gameid);
+            parent_info.modify(parent_itr, ram_payer, [&](auto& u){
                 u.refer --;
             });
         }
 
-        users.emplace(ram_payer, [&](auto& u) {
+        userinfo.emplace(ram_payer, [&](auto& u) {
+            u.gameid = game_itr->gameid;
             u.name = account;
             u.parent = parent;
             u.discount = discount;
@@ -733,21 +768,27 @@ public:
             refer_fee = fee / 2;
             fee -= refer_fee;
 
-            auto user_itr = users.find(account);
-            if(user_itr == users.end()) return;
-            auto parent_itr = users.find(user_itr->parent);
-            if(parent_itr == users.end()) return;
+            user_table userinfo(_self, account);
+            auto user_itr = userinfo.find(game_itr->gameid);
+            // auto user_itr = userinfo.find(account);
+            if(user_itr == userinfo.end()) return;
+            user_table parentinfo(_self, user_itr->parent);
+            auto parent_itr = parentinfo.find(game_itr->gameid);
+            // auto parent_itr = userinfo.find(user_itr->parent);
+            if(parent_itr == parentinfo.end()) return;
             //推荐人奖励回馈直接上级50%
-            users.modify(parent_itr, account, [&](auto& u){
+            parentinfo.modify(parent_itr, account, [&](auto& u){
                 u.reward += fee;
             });
 
             if (refer_fee.amount > 0)
             {
-                parent_itr = users.find(parent_itr->parent);
-                if(parent_itr == users.end()) return;
+                user_table second_parentinfo(_self, parent_itr->parent);
+                auto second_parent_itr = second_parentinfo.find(game_itr->gameid);
+                // parent_itr = userinfo.find(parent_itr->parent);
+                if(parent_itr == second_parentinfo.end()) return;
                 //推荐人奖励二级回馈50%
-                users.modify(parent_itr, account, [&](auto& u){
+                second_parentinfo.modify(second_parent_itr, account, [&](auto& u){
                     u.reward += refer_fee;
                 });
             }
@@ -755,16 +796,18 @@ public:
     }
 
     void claim_fee(account_name account){
-        auto user_itr = users.find(account);
-        if(user_itr == users.end()) return;
+        auto game_itr = _game.begin();
+        user_table userinfo(_self, account);
+        auto user_itr = userinfo.find(game_itr->gameid);
+        // auto user_itr = userinfo.find(account);
+        if(user_itr == userinfo.end()) return;
         //推荐人奖励累积到1EOS以上才能够赎回
         if(user_itr->reward > asset(10000ll, CORE_SYMBOL)){
             asset reward = user_itr->reward;
-            users.modify(user_itr, account, [&](auto& u){
+            userinfo.modify(user_itr, account, [&](auto& u){
                 u.reward = asset(0, CORE_SYMBOL);
             });
             //推荐人奖励金池与主奖金池隔离
-            auto game_itr = _game.begin();
             _game.modify(game_itr, account, [&](auto& g){
                 g.fee -= reward;
             });
@@ -834,11 +877,12 @@ public:
         uint64_t primary_key() const { return gameid; }
         EOSLIB_SERIALIZE(game, (gameid)(reserve)(insure)(max_supply)(supply)(balance)(circulation)(burn)(staked)(fee)(reward)(next_refer)(player_one)(start_time)(reward_time))
     };
-    typedef eosio::multi_index<N(game), game> game_index;
-    game_index _game;
+    typedef eosio::multi_index<N(game), game> game_table;
+    game_table _game;
 
-    // @abi table users i64
+    // @abi table userinfo i64
     struct user{
+        account_name gameid;
         account_name name;
         account_name parent;
         asset reward = asset(0, CORE_SYMBOL);
@@ -847,11 +891,11 @@ public:
         uint64_t invitation = 0;
         uint32_t discount = 0;
 
-        uint64_t primary_key() const { return name; }
-        EOSLIB_SERIALIZE(user, (name)(parent)(reward)(last_action)(refer)(invitation)(discount))
+        uint64_t primary_key() const { return gameid; }
+        EOSLIB_SERIALIZE(user, (gameid)(name)(parent)(reward)(last_action)(refer)(invitation)(discount))
     };
-    typedef eosio::multi_index<N(users), user> user_index;
-    user_index users;
+    typedef eosio::multi_index<N(userinfo), user> user_table;
+    // user_table userinfo;
 
     // @abi table refers i64
     struct refer{
@@ -859,8 +903,8 @@ public:
         uint64_t primary_key() const { return name; }
         EOSLIB_SERIALIZE(refer, (name))
     };
-    typedef eosio::multi_index<N(refers), refer> refer_index;
-    refer_index refers;
+    typedef eosio::multi_index<N(refers), refer> refer_table;
+    refer_table refers;
 
     // @abi table invitations i64
     struct invitation{
@@ -869,8 +913,8 @@ public:
         uint64_t primary_key() const { return to; }
         EOSLIB_SERIALIZE(invitation, (to)(from))
     };
-    typedef eosio::multi_index<N(invitations), invitation> invitation_index;
-    invitation_index invitations;
+    typedef eosio::multi_index<N(invitations), invitation> invitation_table;
+    invitation_table invitations;
 };
 
 #define EOSIO_ABI_EX( TYPE, MEMBERS ) \

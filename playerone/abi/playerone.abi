@@ -56,6 +56,9 @@
       "name": "user",
       "base": "",
       "fields": [{
+          "name": "gameid",
+          "type": "name"
+        },{
           "name": "name",
           "type": "name"
         },{
@@ -111,10 +114,10 @@
       ],
       "type": "game"
     },{
-      "name": "users",
+      "name": "userinfo",
       "index_type": "i64",
       "key_names": [
-        "name"
+        "gameid"
       ],
       "key_types": [
         "name"
