@@ -136,8 +136,11 @@ public:
                         user_table from_userinfo(_self, from);
                         auto from_user_itr = from_userinfo.find(game_itr->gameid);
                         if(from_user_itr == from_userinfo.end()){
-                            new_user(from, "", from);
-                            from_user_itr = from_userinfo.find(game_itr->gameid);
+                            from_user_itr = from_userinfo.emplace(from, [&](auto& u) {
+                                u.gameid = game_itr->gameid;
+                                u.name = from;
+                                u.parent = FEE_ACCOUNT;
+                            });
                         }
                         if(from_user_itr->invitation < 50 && now() < _GAME_INIT_TIME ){
                             from_userinfo.modify(from_user_itr, from, [&](auto& u){
