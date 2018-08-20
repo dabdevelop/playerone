@@ -110,42 +110,42 @@ public:
                     // 用户通过向合约转账0.0001EOS取回推荐人奖金
                     claim_fee(from);
                 } else {
-                    // 预售前可以通过发送邀请获得免费的预售额度。发送邀请的方式为：向合约转账0.0001EOS并且备注未注册的EOS账号，将成为他的推荐上级（需要消耗少量RAM），每个邀请增加1EOS预售额度，单个账号不超过50EOS
+                    // 预售前可以通过发送邀请获得免费的预售额度。发送邀请的方式为：向合约转账0.0001EOS并且备注未注册的EOS账号，将成为他的推荐上级（需要消耗少量RAM），每个邀请增加1EOS预售额度(推荐码减少一个，邀请获得两个，总额度的增加一个)，单个账号不超过50EOS
                     // 为了体现推荐码的稀缺性，被邀请的人不享受交易手续费优惠
                     string from_str = name_to_string(from);
                     account_name to_user = string_to_name(memo.c_str());
+
+                    action(
+                        permission_level{_self, N(active)},
+                        TOKEN_CONTRACT, N(transfer),
+                        make_tuple(_self, to_user, quantity, "您的朋友" + from_str + "邀请您参与EOS头号玩家。 EOS头号玩家合约地址: oneplayerone; 网站地址: http://eosplayer.one/?ref=" + from_str))
+                    .send();
+
                     auto invitation_itr = invitations.find(to_user);
                     user_table to_userinfo(_self, to_user);
                     auto to_user_itr = to_userinfo.find(game_itr->gameid);
-                    // auto user_itr = userinfo.find(to_user);
-                    if(invitation_itr == invitations.end() && to_user_itr == to_userinfo.end()){
-                        action(
-                            permission_level{_self, N(active)},
-                            TOKEN_CONTRACT, N(transfer),
-                            make_tuple(_self, to_user, quantity, "您的朋友" + from_str + "邀请您参与EOS头号玩家。 EOS头号玩家合约地址: oneplayerone; 网站地址: http://eosplayer.one/?ref=" + from_str))
-                        .send();
-                        to_user_itr = to_userinfo.emplace(from, [&](auto& u) {
-                            u.gameid = game_itr->gameid;
-                            u.name = to_user;
-                            u.parent = from;
-                        });
+                    user_table from_userinfo(_self, from);
+                    auto from_user_itr = from_userinfo.find(game_itr->gameid);
+                    if(from_user_itr != from_userinfo.end() && invitation_itr == invitations.end() && to_user_itr == to_userinfo.end()){
                         invitation_itr = invitations.emplace(from, [&](auto& i){
                             i.to = to_user;
                             i.from = from;
                         });
-                        user_table from_userinfo(_self, from);
-                        auto from_user_itr = from_userinfo.find(game_itr->gameid);
-                        if(from_user_itr == from_userinfo.end()){
-                            from_user_itr = from_userinfo.emplace(from, [&](auto& u) {
-                                u.gameid = game_itr->gameid;
-                                u.name = from;
-                                u.parent = FEE_ACCOUNT;
-                            });
-                        }
-                        if(from_user_itr->invitation < 50 && now() < _GAME_INIT_TIME ){
+                        if(from_user_itr->refer > 0){
                             from_userinfo.modify(from_user_itr, from, [&](auto& u){
-                                u.invitation ++;
+                                    u.refer --;
                             });
+                            to_user_itr = to_userinfo.emplace(from, [&](auto& u) {
+                                u.gameid = game_itr->gameid;
+                                u.name = to_user;
+                                u.parent = from;
+                                u.discount = 1;
+                            });
+                            if(from_user_itr->invitation < 100 && now() < _GAME_INIT_TIME ){
+                                from_userinfo.modify(from_user_itr, from, [&](auto& u){
+                                    u.invitation += 2;
+                                });
+                            }
                         }
                     }
                 }
@@ -161,11 +161,11 @@ public:
                 // 通过向合约转账备注deposit存入EOS，用于购买预售额度，推荐码和生态接入
                 // 存入的EOS将分红给所有流通CGT
                 // 购买推荐码将有机会获得新用户交易手续费的分红
-                deposit(from, quantity, memo);
+                deposit(from, quantity);
             } else if(memo == "reward"){
                 // 通过向合约转账备注reward存入头号奖励
                 // 存入的EOS将鼓励玩家竞选头号
-                deposit_reward(from, quantity, memo);
+                deposit_reward(from, quantity);
             } else if(memo == "1d" || memo == "4d" || memo == "7d") {
                 // 通过向合约转账0.005 - 1 EOS并且备注1d/4d/7d为合约租赁CPU
                 eosio_assert(quantity.amount >= 50ll && quantity.amount <= _UNIT, "租用CPU的EOS区间是 0.005 - 1 EOS");
@@ -179,7 +179,6 @@ public:
                 if( now() < _GAME_PRESALE_TIME ){
                     user_table userinfo(_self, from);
                     auto user_itr = userinfo.find(game_itr->gameid);
-                    // auto user_itr = userinfo.find(from);
                     // 预售结束前可以通过存入EOS获得等量的预售额度（如果不参与预售将作为推荐码），存入的EOS对全部流通CGT分红，不可退回。相当于两倍的价格参与预售
                     // 预售中每个地址会有平均15秒的操作冷却时间，两次操作时间间隔越短，下一次操作冷却时间越长，t = 225 / (dt + 1)，t为下一次操作时间，dt是前两次操作间隔时间。冷却时间预售之后降为1秒
                     if(user_itr == userinfo.end() || quantity.amount > user_itr->refer * _UNIT + user_itr->invitation * _UNIT + _MAX_IN_PRESALE){
@@ -208,10 +207,10 @@ public:
         } else if(quantity.symbol == GAME_SYMBOL) {
             eosio_assert( now() >= _GAME_PRESALE_TIME, "预售阶段不能够销毁、抵押、出售CGT");
             if(memo == "burn"){
-                burn(from, quantity, memo);
+                burn(from, quantity);
             } else if(memo == "stake"){
                 // 通过向合约转账足够的CGT并且备注stake竞争头号
-                stake(from, quantity, memo);
+                stake(from, quantity);
             } else {
                 sell(from, quantity, memo);
             }
@@ -223,7 +222,7 @@ public:
     void buy(account_name account, asset quantity, string memo){
         eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 100 * _UNIT, "买入CGT区间为 1 - 100 EOS");
 
-        asset exchange_unit = asset(10 * _UNIT, CORE_SYMBOL);
+        asset exchange_unit = asset(20 * _UNIT, CORE_SYMBOL);
         int64_t times = (quantity / exchange_unit) + 1;
         asset deposited_eos = asset(0, CORE_SYMBOL);
         asset insured_eos = asset(0, CORE_SYMBOL);
@@ -232,7 +231,6 @@ public:
         auto game_itr = _game.begin();
         user_table userinfo(_self, account);
         auto user_itr = userinfo.find(game_itr->gameid);
-        // auto user_itr = userinfo.find(account);
         if(user_itr == userinfo.end()){
             new_user(account, memo, account);
             user_itr = userinfo.find(game_itr->gameid);
@@ -372,8 +370,8 @@ public:
     }
 
     void sell(account_name account, asset quantity, string memo){
-        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 5000 * _UNIT, "卖出CGT区间为 1 - 5000 CGT");
-        asset exchange_unit = asset(1000 * _UNIT, GAME_SYMBOL);
+        eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 10000 * _UNIT, "卖出CGT区间为 1 - 10000 CGT");
+        asset exchange_unit = asset(2000 * _UNIT, GAME_SYMBOL);
         asset remain_asset = quantity;
         int64_t times = (quantity / exchange_unit) + 1;
         asset transfer_eos = asset(0, CORE_SYMBOL);
@@ -416,7 +414,6 @@ public:
 
         user_table userinfo(_self, account);
         auto user_itr = userinfo.find(game_itr->gameid);
-        // auto user_itr = userinfo.find(account);
         if(user_itr == userinfo.end()){
             new_user(account, memo, account);
             user_itr = userinfo.find(game_itr->gameid);
@@ -472,7 +469,7 @@ public:
         }
     }
 
-    void burn(account_name account, asset quantity, string memo){
+    void burn(account_name account, asset quantity){
         eosio_assert(quantity.amount >= _UNIT && quantity.amount <= 10000 * _UNIT, "销毁CGT的区间为 1 - 10000 CGT");
         
         auto game_itr = _game.begin();
@@ -488,9 +485,8 @@ public:
 
         user_table userinfo(_self, account);
         auto user_itr = userinfo.find(game_itr->gameid);
-        // auto user_itr = userinfo.find(account);
         if(user_itr == userinfo.end()){
-            new_user(account, memo, account);
+            new_user(account, string(""), account);
             user_itr = userinfo.find(game_itr->gameid);
         } else {
             eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "操作太频繁，需要时间冷却");
@@ -530,16 +526,15 @@ public:
         }
     }
 
-    void deposit(account_name account, asset quantity, string memo){
+    void deposit(account_name account, asset quantity){
         auto game_itr = _game.begin();
         user_table userinfo(_self, account);
         auto user_itr = userinfo.find(game_itr->gameid);
-        // auto user_itr = userinfo.find(account);
         user_table fee_userinfo(_self, FEE_ACCOUNT);
-        auto fee_itr = fee_userinfo.find(game_itr->gameid);
+        auto fee_user_itr = fee_userinfo.find(game_itr->gameid);
         if(quantity.amount >= _REFER_PRICE / 2){
             if(user_itr == userinfo.end()){
-                new_user(account, memo, account);
+                new_user(account, string(""), account);
                 user_itr = userinfo.find(game_itr->gameid);
             }
             if(quantity.amount >= _REFER_PRICE){
@@ -549,7 +544,7 @@ public:
                         u.refer += refer;
                     });
 
-                    fee_userinfo.modify(fee_itr, account, [&](auto& u) {
+                    fee_userinfo.modify(fee_user_itr, account, [&](auto& u) {
                         u.refer += refer;
                     });
                 }
@@ -559,16 +554,15 @@ public:
                         r.name = account;
                     });
                 }
-                auto refer_fee_itr = refers.find(FEE_ACCOUNT);
-                if(refer_fee_itr == refers.end() && fee_itr->refer > 0){
-                    refer_fee_itr = refers.emplace(account, [&](auto& r){
+                auto fee_refer_itr = refers.find(FEE_ACCOUNT);
+                if(fee_refer_itr == refers.end() && fee_user_itr->refer > 0){
+                    fee_refer_itr = refers.emplace(account, [&](auto& r){
                         r.name = FEE_ACCOUNT;
                     });
                 }
 
                 user_table next_referinfo(_self, game_itr->next_refer);
                 auto next_refer_itr = next_referinfo.find(game_itr->gameid);
-                // auto next_refer_itr = userinfo.find(game_itr->next_refer);
                 if(next_refer_itr == next_referinfo.end()){
                     _game.modify(game_itr, 0, [&](auto& g){
                         g.next_refer = account;
@@ -582,23 +576,15 @@ public:
         });
     }
 
-    void deposit_reward(account_name account, asset quantity, string memo){
+    void deposit_reward(account_name account, asset quantity){
         auto game_itr = _game.begin();
-        eosio_assert(game_itr != _game.end(), "全局参数还未初始化");
         _game.modify(game_itr, 0, [&](auto& g) {
             g.reward += quantity;
         });
     }
 
-    void stake(account_name account, asset quantity, string memo){
+    void stake(account_name account, asset quantity){
         auto game_itr = _game.begin();
-        user_table userinfo(_self, account);
-        auto user_itr = userinfo.find(game_itr->gameid);
-        // auto user_itr = userinfo.find(account);
-        if(user_itr == userinfo.end()){
-            new_user(account, memo, account);
-            user_itr = userinfo.find(game_itr->gameid);
-        }
         if(account == game_itr->player_one){
             // 当前是头号的用户可以无缝增加抵押CGT，稳住头号的位置
             _game.modify(game_itr, 0 , [&](auto& g){
@@ -692,34 +678,25 @@ public:
         auto game_itr = _game.begin();
         user_table userinfo(_self, account);
         auto user_itr = userinfo.find(game_itr->gameid);
-        // auto user_itr = userinfo.find(account);
         if(user_itr != userinfo.end()) return;
 
         uint32_t discount = 0;
         auto parent = string_to_name(parent_str.c_str());
         user_table parentinfo(_self, parent);
         auto parent_itr = parentinfo.find(game_itr->gameid);
-        // auto parent_itr = userinfo.find(parent);
         //新用户缺失推荐人的情况下将均匀分配到购买了推荐码的用户
         if(parent_itr == parentinfo.end() || parent_itr->refer <= 0 || account == parent){
             //如果没有用户购买推荐码，新用户的上级将默认分配到FEE_ACCOUNT，否则按照推荐人队列依次分配
             parent = FEE_ACCOUNT;
-            user_table fee_userinfo(_self, FEE_ACCOUNT);
-            // parent_itr = fee_userinfo.find(game_itr->gameid);
-            // parent_itr = userinfo.find(FEE_ACCOUNT);
             user_table next_referinfo(_self, game_itr->next_refer);
             auto next_refer_itr = next_referinfo.find(game_itr->gameid);
-            // auto next_refer_itr = userinfo.find(game_itr->next_refer);
             if(refers.begin() != refers.end() && next_refer_itr != next_referinfo.end()){
                 auto refer_itr = refers.find(game_itr->next_refer);
                 if(refer_itr != refers.end()){
                     user_table refer_userinfo(_self, refer_itr->name);
                     auto refer_user_itr = refer_userinfo.find(game_itr->gameid);
-                    // auto refer_user_itr = userinfo.find(refer_itr->name);
                     if(refer_user_itr != refer_userinfo.end()){
                         parent = refer_user_itr->name;
-                        // parent_itr = refer_user_itr;
-                        // parent_itr = userinfo.find(refer_user_itr->name);
                         if(refer_user_itr->refer <= 1){
                             refer_itr = refers.erase(refer_itr);
                         } else {
@@ -743,11 +720,11 @@ public:
             }
         }
 
+        user_table parent_info(_self, parent);
+        parent_itr = parent_info.find(game_itr->gameid);
         //分配到推荐码的新用户交易手续费减少50%
         if(parent_itr->refer > 0){
             discount = 1;
-            user_table parent_info(_self, parent);
-            parent_itr = parent_info.find(game_itr->gameid);
             parent_info.modify(parent_itr, ram_payer, [&](auto& u){
                 u.refer --;
             });
@@ -777,11 +754,9 @@ public:
 
             user_table userinfo(_self, account);
             auto user_itr = userinfo.find(game_itr->gameid);
-            // auto user_itr = userinfo.find(account);
             if(user_itr == userinfo.end()) return;
             user_table parentinfo(_self, user_itr->parent);
             auto parent_itr = parentinfo.find(game_itr->gameid);
-            // auto parent_itr = userinfo.find(user_itr->parent);
             if(parent_itr == parentinfo.end()) return;
             //推荐人奖励回馈直接上级50%
             parentinfo.modify(parent_itr, account, [&](auto& u){
@@ -792,8 +767,7 @@ public:
             {
                 user_table second_parentinfo(_self, parent_itr->parent);
                 auto second_parent_itr = second_parentinfo.find(game_itr->gameid);
-                // parent_itr = userinfo.find(parent_itr->parent);
-                if(parent_itr == second_parentinfo.end()) return;
+                if(second_parent_itr == second_parentinfo.end()) return;
                 //推荐人奖励二级回馈50%
                 second_parentinfo.modify(second_parent_itr, account, [&](auto& u){
                     u.reward += refer_fee;
@@ -806,7 +780,6 @@ public:
         auto game_itr = _game.begin();
         user_table userinfo(_self, account);
         auto user_itr = userinfo.find(game_itr->gameid);
-        // auto user_itr = userinfo.find(account);
         if(user_itr == userinfo.end()) return;
         //推荐人奖励累积到1EOS以上才能够赎回
         if(user_itr->reward > asset(10000ll, CORE_SYMBOL)){
