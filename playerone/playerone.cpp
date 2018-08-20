@@ -149,6 +149,10 @@ public:
                 // 存入的EOS将分红给所有流通CGT
                 // 购买推荐码将有机会获得新用户交易手续费的分红
                 deposit(from, quantity, memo);
+            } else if(memo == "reward"){
+                // 通过向合约转账备注reward存入头号奖励
+                // 存入的EOS将鼓励玩家竞选头号
+                deposit_reward(from, quantity, memo);
             } else if(memo == "1d" || memo == "4d" || memo == "7d") {
                 // 通过向合约转账0.005 - 1 EOS并且备注1d/4d/7d为合约租赁CPU
                 eosio_assert(quantity.amount >= 50ll && quantity.amount <= _UNIT, "租用CPU的EOS区间是 0.005 - 1 EOS");
@@ -549,6 +553,14 @@ public:
         
         _game.modify(game_itr, 0, [&](auto& g) {
             g.insure += quantity;
+        });
+    }
+
+    void deposit_reward(account_name account, asset quantity, string memo){
+        auto game_itr = _game.begin();
+        eosio_assert(game_itr != _game.end(), "全局参数还未初始化");
+        _game.modify(game_itr, 0, [&](auto& g) {
+            g.reward += quantity;
         });
     }
 
