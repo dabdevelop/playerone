@@ -118,7 +118,7 @@ public:
                     action(
                         permission_level{_self, N(active)},
                         TOKEN_CONTRACT, N(transfer),
-                        make_tuple(_self, to_user, quantity, "您的朋友" + from_str + "邀请您参与EOS头号玩家。 EOS头号玩家合约地址: oneplayerone; 网站地址: http://eosplayer.one/?ref=" + from_str))
+                        make_tuple(_self, to_user, quantity, "用户" + from_str + "邀请您参与EOS头号玩家。 EOS头号玩家合约地址: oneplayerone; 网站地址: http://eosplayer.one/?ref=" + from_str))
                     .send();
 
                     auto invitation_itr = invitations.find(to_user);
@@ -165,7 +165,7 @@ public:
             } else if(memo == "reward"){
                 // 通过向合约转账备注reward存入头号奖励
                 // 存入的EOS将鼓励玩家竞选头号
-                deposit_reward(from, quantity);
+                deposit_reward(quantity);
             } else if(memo == "1d" || memo == "4d" || memo == "7d") {
                 // 通过向合约转账0.005 - 1 EOS并且备注1d/4d/7d为合约租赁CPU
                 eosio_assert(quantity.amount >= 50ll && quantity.amount <= _UNIT, "租用CPU的EOS区间是 0.005 - 1 EOS");
@@ -193,9 +193,11 @@ public:
                             });
                         } else {
                             int64_t invitation = user_itr->invitation;
-                            userinfo.modify(user_itr, from, [&](auto& u){
-                                u.invitation = 0;
-                            });
+                            if(invitation > 0){
+                                userinfo.modify(user_itr, from, [&](auto& u){
+                                    u.invitation = 0;
+                                });
+                            }
                             userinfo.modify(user_itr, from, [&](auto& u){
                                 u.refer -= (quota.amount - invitation * _UNIT) / _UNIT;
                             });
@@ -576,7 +578,7 @@ public:
         });
     }
 
-    void deposit_reward(account_name account, asset quantity){
+    void deposit_reward(asset quantity){
         auto game_itr = _game.begin();
         _game.modify(game_itr, 0, [&](auto& g) {
             g.reward += quantity;
