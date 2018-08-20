@@ -312,7 +312,7 @@ public:
                 crr = _crr(circulation);
                 asset to_issue_eos = asset(real_type(exchange_unit.amount) * crr, exchange_unit.symbol);
                 real_type INITIAL_PRICE(_INITIAL_PRICE);
-                real_type UNIT(10000.0);
+                real_type UNIT(_UNIT);
                 INITIAL_PRICE = INITIAL_PRICE / UNIT;
                 asset token_per_issue = asset(real_type(to_issue_eos.amount) / INITIAL_PRICE, GAME_SYMBOL);
                 circulation += token_per_issue;
@@ -611,7 +611,7 @@ public:
             g.staked = asset(0, GAME_SYMBOL);
             g.player_one = FEE_ACCOUNT;
         });
-        if(staked >= asset(1000 * 10000ll, GAME_SYMBOL)){
+        if(staked >= asset(1000 * _UNIT, GAME_SYMBOL)){
             // 争取头号的用户将有10%的抵押CGT作为手续费，解除抵押的时候收取
             asset fee = staked / 10;
             staked -= fee;
@@ -661,7 +661,7 @@ public:
         asset reward = game_itr->reward;
         // 每一个奖励周期（24小时），头号都能够获得手续费奖池的10%，前提是发送金额大于10EOS
         reward.amount = reward.amount / 10;
-        if( now() >= game_itr->reward_time && reward >= asset(10 * 10000ll, CORE_SYMBOL)){
+        if( now() >= game_itr->reward_time && reward >= asset(10 * _UNIT, CORE_SYMBOL)){
             _game.modify(game_itr, 0, [&](auto& g){
                 g.reward -= reward;
                 g.reward_time = now() + _REWARD_COOL_DOWN;
@@ -782,7 +782,7 @@ public:
         auto user_itr = userinfo.find(game_itr->gameid);
         if(user_itr == userinfo.end()) return;
         //推荐人奖励累积到1EOS以上才能够赎回
-        if(user_itr->reward > asset(10000ll, CORE_SYMBOL)){
+        if(user_itr->reward > asset(_UNIT, CORE_SYMBOL)){
             asset reward = user_itr->reward;
             userinfo.modify(user_itr, account, [&](auto& u){
                 u.reward = asset(0, CORE_SYMBOL);
@@ -810,7 +810,7 @@ public:
         real_type D(_D);
         real_type ONE(1.0);
         real_type H(100.0);
-        real_type UNIT(10000.0);
+        real_type UNIT(_UNIT);
         real_type E(2.71828182845904);
 
         real_type X(circulation.amount);
