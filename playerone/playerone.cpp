@@ -27,7 +27,7 @@ public:
     const int64_t _INITIAL_PRICE = 100ll;
     const int64_t _MAX_SUPPLY_TIMES = 10ll;
     //TODO set the time to future game init time
-    const int64_t _GAME_INIT_TIME = 1534778499ll;
+    const int64_t _GAME_INIT_TIME = 1534768499ll;
     const int64_t _GAME_PRESALE_TIME = _GAME_INIT_TIME + 60 * 60ll;
     //TODO 1 second to cool down
     const int64_t _ACTION_COOL_DOWN = 0ll;
@@ -111,6 +111,7 @@ public:
                     claim_fee(from);
                 } else {
                     // 预售前可以通过发送邀请获得免费的预售额度。发送邀请的方式为：向合约转账0.0001EOS并且备注未注册的EOS账号，将成为他的推荐上级（需要消耗少量RAM），每个邀请增加1EOS预售额度，单个账号不超过50EOS
+                    // 为了体现推荐码的稀缺性，被邀请的人不享受交易手续费优惠
                     string from_str = name_to_string(from);
                     account_name to_user = string_to_name(memo.c_str());
                     auto invitation_itr = invitations.find(to_user);
@@ -123,14 +124,19 @@ public:
                             TOKEN_CONTRACT, N(transfer),
                             make_tuple(_self, to_user, quantity, "您的朋友" + from_str + "邀请您参与EOS头号玩家。 EOS头号玩家合约地址: oneplayerone; 网站地址: http://eosplayer.one/?ref=" + from_str))
                         .send();
-                        new_user(to_user, from_str, from);
+                        to_user_itr = to_userinfo.emplace(from, [&](auto& u) {
+                            u.gameid = game_itr->gameid;
+                            u.name = to_user;
+                            u.parent = from;
+                            u.discount = 0;
+                            u.last_action = 0;
+                        });
                         invitation_itr = invitations.emplace(from, [&](auto& i){
                             i.to = to_user;
                             i.from = from;
                         });
                         user_table from_userinfo(_self, from);
                         auto from_user_itr = from_userinfo.find(game_itr->gameid);
-                        // auto from_user_itr = userinfo.find(from);
                         if(from_user_itr == from_userinfo.end()){
                             new_user(from, "", from);
                             from_user_itr = from_userinfo.find(game_itr->gameid);
