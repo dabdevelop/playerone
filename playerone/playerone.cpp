@@ -128,8 +128,6 @@ public:
                             u.gameid = game_itr->gameid;
                             u.name = to_user;
                             u.parent = from;
-                            u.discount = 0;
-                            u.last_action = 0;
                         });
                         invitation_itr = invitations.emplace(from, [&](auto& i){
                             i.to = to_user;
