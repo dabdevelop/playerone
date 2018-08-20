@@ -162,9 +162,10 @@ public:
                 if( now() < _GAME_PRESALE_TIME ){
                     auto user_itr = users.find(from);
                     // 预售结束前可以通过存入EOS获得等量的预售额度（如果不参与预售将作为推荐码），存入的EOS对全部流通CGT分红，不可退回。相当于两倍的价格参与预售
+                    // 预售中每个地址会有平均15秒的操作冷却时间，两次操作时间间隔越短，下一次操作冷却时间越长，t = 225 / (dt + 1)，t为下一次操作时间，dt是前两次操作间隔时间。冷却时间预售之后降为1秒
                     if(user_itr == users.end() || quantity.amount > user_itr->refer * _UNIT + user_itr->invitation * _UNIT){
                         eosio_assert( quantity.amount >= _UNIT && quantity.amount <= _MAX_IN_PRESALE, "预售份额不足，存入EOS获得等量不受限的份额（不能退回）或者单次购买 1 - 10 EOS");
-                    } else if(quantity.amount > 10 * 10000ll) {
+                    } else if(quantity.amount > 10 * _UNIT) {
                         // 超出10EOS的部分将从预售额度里面扣除，并且优先扣除邀请获得的额度
                         asset quota = quantity;
                         quota -= asset(_MAX_IN_PRESALE, CORE_SYMBOL);
@@ -178,7 +179,7 @@ public:
                                 u.invitation = 0;
                             });
                             users.modify(user_itr, from, [&](auto& u){
-                                u.refer -= (quota.amount - invitation * 10000ll) / 10000ll;
+                                u.refer -= (quota.amount - invitation * _UNIT) / _UNIT;
                             });
                         }
                     }
@@ -186,7 +187,7 @@ public:
                 buy(from, quantity, memo);
             }
         } else if(quantity.symbol == GAME_SYMBOL) {
-            eosio_assert( now() >= _GAME_PRESALE_TIME, "预售阶段不能够抵押、销毁、出售CGT");
+            eosio_assert( now() >= _GAME_PRESALE_TIME, "预售阶段不能够销毁、抵押、出售CGT");
             if(memo == "burn"){
                 burn(from, quantity, memo);
             } else if(memo == "stake"){
@@ -216,7 +217,7 @@ public:
             user_itr = users.find(account);
         } else {
             uint64_t now_action = now();
-            eosio_assert( now_action >= user_itr->last_action + _ACTION_COOL_DOWN, "操作太频繁，需要冷却时间");
+            eosio_assert( now_action >= user_itr->last_action + _ACTION_COOL_DOWN, "操作太频繁，需要时间冷却");
             if( now_action < _GAME_PRESALE_TIME){
                 now_action += 225ll / (now_action - user_itr->last_action + 1);
             }
@@ -398,7 +399,7 @@ public:
             new_user(account, memo, account);
             user_itr = users.find(account);
         } else {
-            eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "操作太频繁，需要冷却时间");
+            eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "操作太频繁，需要时间冷却");
             users.modify(user_itr, account, [&](auto& u) {
                 u.last_action = now();
             });
@@ -468,7 +469,7 @@ public:
             new_user(account, memo, account);
             user_itr = users.find(account);
         } else {
-            eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "操作太频繁，需要冷却时间");
+            eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "操作太频繁，需要时间冷却");
             users.modify(user_itr, account, [&](auto& u) {
                 u.last_action = now();
             });
@@ -603,13 +604,13 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, staked, string("可能有其他玩家抵押超越您了，您已经不再是头号。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
+                make_tuple(_self, account, staked, string("可能有其他玩家抵押超越了您，您已经不再是头号。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
             .send();
 
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, asset(1ll, CORE_SYMBOL), string("可能有其他玩家抵押超越您了，您已经不再是头号。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
+                make_tuple(_self, account, asset(1ll, CORE_SYMBOL), string("可能有其他玩家抵押超越了您，您已经不再是头号。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
             .send();
             
             claim_reward(game_itr->player_one);
