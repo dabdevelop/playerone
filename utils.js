@@ -41,4 +41,7 @@ function generateOfficialAccount(names){
 }
 
 // generateTesters(10);
-generateOfficialAccount(['oneplayerone', 'blackholeeos', 'playeronefee', 'playeroneiss'])
+// generateOfficialAccount(['eosplayerone', 'oneplayerone', 'blackholeeos', 'playeronefee', 'playeroneiss'])
+generateOfficialAccount(['enuplayerone']);
+
+// generateSignatureProvider(amount)

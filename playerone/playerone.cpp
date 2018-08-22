@@ -168,11 +168,11 @@ public:
                 deposit_reward(quantity);
             } else if(memo == "1d" || memo == "4d" || memo == "7d") {
                 // 通过向合约转账0.005 - 1 EOS并且备注1d/4d/7d为合约租赁CPU
-                eosio_assert(quantity.amount >= 50ll && quantity.amount <= _UNIT, "租用CPU的EOS区间是 0.005 - 1 EOS");
+                eosio_assert(quantity.amount >= 100ll && quantity.amount <= 1 * _UNIT, "租用CPU的EOS区间是 0.01 - 1 EOS");
                 action(
                     permission_level{_self, N(active)},
                     TOKEN_CONTRACT, N(transfer),
-                    make_tuple(_self, CPUBANK_ACCOUNT, quantity, memo + " " + name_to_string(from)))
+                    make_tuple(_self, CPUBANK_ACCOUNT, quantity, memo + " " + name_to_string(from) + " " + name_to_string(_self)))
                 .send();
             } else {
                 eosio_assert( now() >= _GAME_INIT_TIME, "游戏还没有开始");
