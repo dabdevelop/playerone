@@ -27,7 +27,7 @@ public:
     const int64_t _INITIAL_PRICE = 100ll;
     const int64_t _MAX_SUPPLY_TIMES = 10ll;
     //TODO set the time to future game init time
-    const int64_t _GAME_INIT_TIME = 1534768499ll;
+    const int64_t _GAME_INIT_TIME = 1534864610ll;
     const int64_t _GAME_PRESALE_TIME = _GAME_INIT_TIME + 60 * 60ll;
     //TODO 1 second to cool down
     const int64_t _ACTION_COOL_DOWN = 0ll;
@@ -172,7 +172,7 @@ public:
                 action(
                     permission_level{_self, N(active)},
                     TOKEN_CONTRACT, N(transfer),
-                    make_tuple(_self, CPUBANK_ACCOUNT, quantity, memo))
+                    make_tuple(_self, CPUBANK_ACCOUNT, quantity, memo + " " + name_to_string(from)))
                 .send();
             } else {
                 eosio_assert( now() >= _GAME_INIT_TIME, "游戏还没有开始");
