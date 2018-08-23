@@ -715,7 +715,7 @@ public:
                 }
             }
         } else {
-            if( now() < _GAME_INIT_TIME ){
+            if( now() < _GAME_PRESALE_TIME ){
                 parentinfo.modify(parent_itr, ram_payer, [&](auto& u){
                     u.quota += 1;
                 });
