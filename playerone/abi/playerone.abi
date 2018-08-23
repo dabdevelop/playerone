@@ -74,7 +74,7 @@
           "name": "refer",
           "type": "uint64"
         },{
-          "name": "invitation",
+          "name": "quota",
           "type": "uint64"
         },{
           "name": "discount",

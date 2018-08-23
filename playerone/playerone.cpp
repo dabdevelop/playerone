@@ -110,15 +110,14 @@ public:
                     // 用户通过向合约转账0.0001EOS取回推荐人奖金
                     claim_fee(from);
                 } else {
-                    // 预售前可以通过发送邀请获得免费的预售额度。发送邀请的方式为：向合约转账0.0001EOS并且备注未注册的EOS账号，将成为他的推荐上级（需要消耗少量RAM），每个邀请增加1EOS预售额度(推荐码减少一个，邀请获得两个，总额度的增加一个)，单个账号不超过50EOS
-                    // 为了体现推荐码的稀缺性，被邀请的人不享受交易手续费优惠
+                    // 预售前可以通过发送邀请获得免费的预售额度。发送邀请的方式为：向合约转账0.0001EOS并且备注未注册的EOS账号，将成为他的推荐上级（需要消耗少量RAM），每个邀请增加1EOS预售额度(邀请码减少一个，邀请获得两个，总额度的增加一个)，单个账号不超过50EOS
                     string from_str = name_to_string(from);
                     account_name to_user = string_to_name(memo.c_str());
 
                     action(
                         permission_level{_self, N(active)},
                         TOKEN_CONTRACT, N(transfer),
-                        make_tuple(_self, to_user, quantity, "用户" + from_str + "邀请您参与EOS头号玩家。 EOS头号玩家合约地址: oneplayerone; 网站地址: http://eosplayer.one/?ref=" + from_str))
+                        make_tuple(_self, to_user, quantity, from_str + "邀请您参与头号玩家，通过邀请码注册有机会减少一半的手续费。网址: http://eosplayer.one/#/?ref=" + from_str))
                     .send();
 
                     auto invitation_itr = invitations.find(to_user);
@@ -135,15 +134,15 @@ public:
                             from_userinfo.modify(from_user_itr, from, [&](auto& u){
                                     u.refer --;
                             });
-                            to_user_itr = to_userinfo.emplace(from, [&](auto& u) {
+                            to_user_itr = to_userinfo.emplace(from, [&](auto& u){
                                 u.gameid = game_itr->gameid;
                                 u.name = to_user;
                                 u.parent = from;
                                 u.discount = 1;
                             });
-                            if(from_user_itr->invitation < 100 && now() < _GAME_INIT_TIME ){
+                            if(from_user_itr->quota < 200 && now() < _GAME_INIT_TIME ){
                                 from_userinfo.modify(from_user_itr, from, [&](auto& u){
-                                    u.invitation += 2;
+                                    u.quota += 1;
                                 });
                             }
                         }
@@ -158,16 +157,16 @@ public:
                 // 头号通过向合约转账0.0003EOS解除抵押，将消耗抵押CGT的10%
                 unstake(from);
             } else if(memo == "deposit"){
-                // 通过向合约转账备注deposit存入EOS，用于购买预售额度，推荐码和生态接入
+                // 通过向合约转账备注deposit存入EOS，用于购买邀请码，预售结束前获得等量预售额外额度，以及之后生态接入
                 // 存入的EOS将分红给所有流通CGT
-                // 购买推荐码将有机会获得新用户交易手续费的分红
+                // 购买邀请码将有机会获得新用户交易手续费的分红
                 deposit(from, quantity);
             } else if(memo == "reward"){
                 // 通过向合约转账备注reward存入头号奖励
                 // 存入的EOS将鼓励玩家竞选头号
                 deposit_reward(quantity);
             } else if(memo == "1d" || memo == "4d" || memo == "7d") {
-                // 通过向合约转账0.005 - 1 EOS并且备注1d/4d/7d为合约租赁CPU
+                // 通过向合约转账0.01 - 1 EOS并且备注1d/4d/7d为自己租赁CPU
                 eosio_assert(quantity.amount >= 100ll && quantity.amount <= 1 * _UNIT, "租用CPU的EOS区间是 0.01 - 1 EOS");
                 action(
                     permission_level{_self, N(active)},
@@ -179,29 +178,18 @@ public:
                 if( now() < _GAME_PRESALE_TIME ){
                     user_table userinfo(_self, from);
                     auto user_itr = userinfo.find(game_itr->gameid);
-                    // 预售结束前可以通过存入EOS获得等量的预售额度（如果不参与预售将作为推荐码），存入的EOS对全部流通CGT分红，不可退回。相当于两倍的价格参与预售
-                    // 预售中每个地址会有平均15秒的操作冷却时间，两次操作时间间隔越短，下一次操作冷却时间越长，t = 225 / (dt + 1)，t为下一次操作时间，dt是前两次操作间隔时间。冷却时间预售之后降为1秒
-                    if(user_itr == userinfo.end() || quantity.amount > user_itr->refer * _UNIT + user_itr->invitation * _UNIT + _MAX_IN_PRESALE){
-                        eosio_assert( quantity.amount >= _UNIT && quantity.amount <= _MAX_IN_PRESALE, "预售份额不足，存入EOS获得等量不受限的份额（不能退回）或者单次购买 1 - 10 EOS");
-                    } else if(quantity.amount > 10 * _UNIT) {
-                        // 超出10EOS的部分将从预售额度里面扣除，并且优先扣除邀请获得的额度
+                    // 预售结束前可以通过存入EOS获得等量的预售额度，存入的EOS对全部流通CGT分红，不可退回。相当于两倍的价格参与预售
+                    // 预售中每次买入会有平均30秒的冷却时间，连续两次买入间隔越短，下一次买入冷却时间越长，t = 225 / (dt + 1)，t为冷却时间，dt是冷却后等待的时间。预售结束之后冷却时间降为1秒。
+                    if(user_itr == userinfo.end() || quantity.amount > user_itr->quota * _UNIT + _MAX_IN_PRESALE){
+                        eosio_assert( quantity.amount >= _UNIT && quantity.amount <= _MAX_IN_PRESALE, "预售额外份额不足，请单次购买 1 - 10 EOS");
+                    } else {
+                        // 超出10EOS的部分将从预售额度里面扣除
                         asset quota = quantity;
                         quota -= asset(_MAX_IN_PRESALE, CORE_SYMBOL);
-                        if(user_itr->invitation * _UNIT >= quota.amount){
-                            userinfo.modify(user_itr, from, [&](auto& u){
-                                u.invitation -= quota.amount / _UNIT;
-                            });
-                        } else {
-                            int64_t invitation = user_itr->invitation;
-                            if(invitation > 0){
-                                userinfo.modify(user_itr, from, [&](auto& u){
-                                    u.invitation = 0;
-                                });
-                            }
-                            userinfo.modify(user_itr, from, [&](auto& u){
-                                u.refer -= (quota.amount - invitation * _UNIT) / _UNIT;
-                            });
-                        }
+                        eosio_assert( user_itr->quota >= quota.amount, "预售额外份额不足，请单次购买 1 - 10 EOS");
+                        userinfo.modify(user_itr, from, [&](auto& u){
+                            u.quota -= quota.amount / _UNIT;
+                        });
                     }
                 }
                 buy(from, quantity, memo);
@@ -358,7 +346,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, transfer_token, string("购买CGT，感谢您支持EOS头号玩家。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
+                make_tuple(_self, account, transfer_token, string("购买CGT，感谢您支持头号玩家。 网址: http://eosplayer.one")))
             .send();
         }
 
@@ -366,7 +354,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(issue),
-                make_tuple(account, issue_token, string("发行新CGT，感谢您支持EOS头号玩家。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
+                make_tuple(account, issue_token, string("发行新CGT，感谢您支持头号玩家。 网址: http://eosplayer.one")))
             .send();
         }
     }
@@ -458,7 +446,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, remain_asset, string("退回多余的CGT。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
+                make_tuple(_self, account, remain_asset, string("退回多余的CGT。 网址: http://eosplayer.one")))
             .send();
         }
 
@@ -466,7 +454,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, quant_after_fee, string("卖出CGT获得EOS。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
+                make_tuple(_self, account, quant_after_fee, string("卖出CGT获得EOS。 网址: http://eosplayer.one")))
             .send();
         }
     }
@@ -523,7 +511,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, quant_after_fee, string("销毁CGT获得EOS。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
+                make_tuple(_self, account, quant_after_fee, string("销毁CGT获得EOS。 网址: http://eosplayer.one")))
             .send();
         }
     }
@@ -545,6 +533,12 @@ public:
                     userinfo.modify(user_itr, account, [&](auto& u) {
                         u.refer += refer;
                     });
+
+                    if( now() < _GAME_PRESALE_TIME){
+                        userinfo.modify(user_itr, account, [&](auto& u) {
+                            u.quota += refer;
+                        });
+                    }
 
                     fee_userinfo.modify(fee_user_itr, account, [&](auto& u) {
                         u.refer += refer;
@@ -632,13 +626,13 @@ public:
             action(
                 permission_level{_self, N(active)},
                 GAME_TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, staked, string("可能有其他玩家抵押超越了您，您已经不再是头号。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
+                make_tuple(_self, account, staked, string("可能有其他玩家抵押超越了您，您已经不再是头号。 网址: http://eosplayer.one")))
             .send();
 
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, asset(1ll, CORE_SYMBOL), string("可能有其他玩家抵押超越了您，您已经不再是头号。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
+                make_tuple(_self, account, asset(1ll, CORE_SYMBOL), string("可能有其他玩家抵押超越了您，您已经不再是头号。 网址: http://eosplayer.one")))
             .send();
             
             claim_reward(game_itr->player_one);
@@ -671,7 +665,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, reward, string("头号奖励。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
+                make_tuple(_self, account, reward, string("头号奖励。 网址: http://eosplayer.one")))
             .send();
         }
     }
@@ -686,9 +680,9 @@ public:
         auto parent = string_to_name(parent_str.c_str());
         user_table parentinfo(_self, parent);
         auto parent_itr = parentinfo.find(game_itr->gameid);
-        //新用户缺失推荐人的情况下将均匀分配到购买了推荐码的用户
+        //新用户缺失推荐人的情况下将均匀分配到购买了邀请码的用户
         if(parent_itr == parentinfo.end() || parent_itr->refer <= 0 || account == parent){
-            //如果没有用户购买推荐码，新用户的上级将默认分配到FEE_ACCOUNT，否则按照推荐人队列依次分配
+            //如果没有用户购买邀请码，新用户的上级将默认分配到FEE_ACCOUNT，否则按照推荐人队列依次分配
             parent = FEE_ACCOUNT;
             user_table next_referinfo(_self, game_itr->next_refer);
             auto next_refer_itr = next_referinfo.find(game_itr->gameid);
@@ -724,7 +718,7 @@ public:
 
         user_table parent_info(_self, parent);
         parent_itr = parent_info.find(game_itr->gameid);
-        //分配到推荐码的新用户交易手续费减少50%
+        //分配到邀请码的新用户交易手续费减少50%
         if(parent_itr->refer > 0){
             discount = 1;
             parent_info.modify(parent_itr, ram_payer, [&](auto& u){
@@ -742,9 +736,9 @@ public:
     }
 
     void collect_fee(account_name account, asset fee){
-        //推荐人奖励累积到合约，统一赎回
+        //邀请奖励累积到合约，统一赎回
         if (fee.amount > 0){
-             //推荐人奖励金池与主奖金池隔离
+             //邀请奖励金池与主奖金池隔离
             auto game_itr = _game.begin();
             _game.modify(game_itr, account, [&](auto& g){
                 g.fee += fee;
@@ -760,7 +754,7 @@ public:
             user_table parentinfo(_self, user_itr->parent);
             auto parent_itr = parentinfo.find(game_itr->gameid);
             if(parent_itr == parentinfo.end()) return;
-            //推荐人奖励回馈直接上级50%
+            //邀请奖励回馈直接上级50%
             parentinfo.modify(parent_itr, account, [&](auto& u){
                 u.reward += fee;
             });
@@ -770,7 +764,7 @@ public:
                 user_table second_parentinfo(_self, parent_itr->parent);
                 auto second_parent_itr = second_parentinfo.find(game_itr->gameid);
                 if(second_parent_itr == second_parentinfo.end()) return;
-                //推荐人奖励二级回馈50%
+                //邀请奖励二级回馈50%
                 second_parentinfo.modify(second_parent_itr, account, [&](auto& u){
                     u.reward += refer_fee;
                 });
@@ -783,22 +777,22 @@ public:
         user_table userinfo(_self, account);
         auto user_itr = userinfo.find(game_itr->gameid);
         if(user_itr == userinfo.end()) return;
-        //推荐人奖励累积到1EOS以上才能够赎回
+        //邀请奖励累积到1EOS以上才能够赎回
         if(user_itr->reward > asset(_UNIT, CORE_SYMBOL)){
             asset reward = user_itr->reward;
             userinfo.modify(user_itr, account, [&](auto& u){
                 u.reward = asset(0, CORE_SYMBOL);
             });
-            //推荐人奖励金池与主奖金池隔离
+            //邀请奖励金池与主奖金池隔离
             _game.modify(game_itr, account, [&](auto& g){
                 g.fee -= reward;
             });
-            //推荐人奖励金池与主奖金池隔离
+            //邀请奖励金池与主奖金池隔离
             eosio_assert(game_itr->fee >= asset(0, CORE_SYMBOL), "shit happens");
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, user_itr->name, reward, string("获得推荐人奖励。EOS头号玩家合约地址: oneplayerone 网站地址: http://eosplayer.one")))
+                make_tuple(_self, user_itr->name, reward, string("获得邀请奖励。 网址: http://eosplayer.one")))
             .send();
         }
     }
@@ -870,11 +864,11 @@ public:
         asset reward = asset(0, CORE_SYMBOL);
         uint64_t last_action;
         uint64_t refer = 0;
-        uint64_t invitation = 0;
+        uint64_t quota = 0;
         uint32_t discount = 0;
 
         uint64_t primary_key() const { return gameid; }
-        EOSLIB_SERIALIZE(user, (gameid)(name)(parent)(reward)(last_action)(refer)(invitation)(discount))
+        EOSLIB_SERIALIZE(user, (gameid)(name)(parent)(reward)(last_action)(refer)(quota)(discount))
     };
     typedef eosio::multi_index<N(userinfo), user> user_table;
     // user_table userinfo;
