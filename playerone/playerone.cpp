@@ -28,7 +28,7 @@ public:
     const int64_t _MAX_SUPPLY_TIMES = 10ll;
     //TODO set the time to future game init time
     const int64_t _GAME_INIT_TIME = 1534888894ll;
-    const int64_t _GAME_PRESALE_TIME = _GAME_INIT_TIME + 60 * 60ll;
+    const int64_t _GAME_PRESALE_TIME = _GAME_INIT_TIME + 2 * 60 * 60ll;
     //TODO 1 second to cool down
     const int64_t _ACTION_COOL_DOWN = 0ll;
     const int64_t _REWARD_COOL_DOWN = 24 * 60 * 60ll;
