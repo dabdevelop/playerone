@@ -25,11 +25,9 @@ public:
     const int64_t _D = _L / 4;
     const int64_t _INITIAL_PRICE = 100ll;
     const int64_t _MAX_SUPPLY_TIMES = 10ll;
-    //TODO set the time to future game init time
-    const int64_t _GAME_INIT_TIME = 1534864610ll;
+    const int64_t _GAME_INIT_TIME = 1535112488ll;  // 2018/8/24 20:8:8
     const int64_t _GAME_PRESALE_TIME = _GAME_INIT_TIME + 2 * 60 * 60ll;
-    //TODO 1 second to cool down
-    const int64_t _ACTION_COOL_DOWN = 0ll;
+    const int64_t _ACTION_COOL_DOWN = 1ll;
     const int64_t _REWARD_COOL_DOWN = 24 * 60 * 60ll;
     const int64_t _UNIT = 10000ll;
     const int64_t _MAX_IN_PRESALE = 10 * _UNIT;
@@ -165,7 +163,7 @@ public:
                 // 存入的ENU将鼓励玩家竞选头号
                 deposit_reward(quantity);
             } else {
-                enumivo_assert( now() >= _GAME_INIT_TIME, "游戏还没有开始");
+                enumivo_assert( now() >= _GAME_INIT_TIME, "游戏还没有开始，开始时间是：2018/8/24 20:8:8");
                 if( now() < _GAME_PRESALE_TIME ){
                     user_table userinfo(_self, from);
                     auto user_itr = userinfo.find(game_itr->gameid);
@@ -704,6 +702,12 @@ public:
                         }
                     }
                 }
+            }
+        } else {
+            if( now() < _GAME_INIT_TIME ){
+                parentinfo.modify(parent_itr, ram_payer, [&](auto& u){
+                    u.quota += 1;
+                });
             }
         }
 

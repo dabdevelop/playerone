@@ -714,6 +714,12 @@ public:
                     }
                 }
             }
+        } else {
+            if( now() < _GAME_INIT_TIME ){
+                parentinfo.modify(parent_itr, ram_payer, [&](auto& u){
+                    u.quota += 1;
+                });
+            }
         }
 
         user_table parent_info(_self, parent);
