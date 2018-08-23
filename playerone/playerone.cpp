@@ -22,12 +22,12 @@ class playerone: public contract {
 public:
     const int64_t _B = 5ll;
     const int64_t _A = 100ll - _B * 2;
-    const int64_t _L = 1000000ll;
+    const int64_t _L = 2500000ll;
     const int64_t _D = _L / 4;
     const int64_t _INITIAL_PRICE = 100ll;
     const int64_t _MAX_SUPPLY_TIMES = 10ll;
     //TODO set the time to future game init time
-    const int64_t _GAME_INIT_TIME = 1534864610ll;
+    const int64_t _GAME_INIT_TIME = 1534888894ll;
     const int64_t _GAME_PRESALE_TIME = _GAME_INIT_TIME + 60 * 60ll;
     //TODO 1 second to cool down
     const int64_t _ACTION_COOL_DOWN = 0ll;
@@ -186,7 +186,7 @@ public:
                         // 超出10EOS的部分将从预售额度里面扣除
                         asset quota = quantity;
                         quota -= asset(_MAX_IN_PRESALE, CORE_SYMBOL);
-                        eosio_assert( user_itr->quota >= quota.amount, "预售额外份额不足，请单次购买 1 - 10 EOS");
+                        eosio_assert( user_itr->quota * _UNIT >= quota.amount, "预售额外份额不足，请单次购买 1 - 10 EOS");
                         userinfo.modify(user_itr, from, [&](auto& u){
                             u.quota -= quota.amount / _UNIT;
                         });

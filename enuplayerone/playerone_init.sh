@@ -26,7 +26,7 @@ enucli set code oneplayerone ./playerone.wasm -p oneplayerone
 enucli set abi oneplayerone ./playerone.abi -p oneplayerone
 
 enucli set contract playeroneiss ./enu.token -p playeroneiss
-enucli push action playeroneiss create '[ "oneplayerone", "10000000.0000 CGT"]' -p playeroneiss
+enucli push action playeroneiss create '[ "oneplayerone", "250000000.0000 CGT"]' -p playeroneiss
 
 enucli set account permission oneplayerone active '{"threshold": 1,"keys": [{"key": "ENU4wen3kfDXSHEb4nYmzDkcfvoPZb2jyoRS6mb6EbGJgM5Apu6Go","weight": 1}],"accounts": [{"permission":{"actor":"oneplayerone","permission":"enumivo.code"},"weight":1}]}' owner -p oneplayerone
 

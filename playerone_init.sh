@@ -26,7 +26,7 @@ cleos set code oneplayerone ./build/playerone/playerone.wasm -p oneplayerone
 cleos set abi oneplayerone ./build/playerone/playerone.abi -p oneplayerone
 
 cleos set contract playeroneiss ./build/eosio.token -p playeroneiss
-cleos push action playeroneiss create '[ "oneplayerone", "10000000.0000 CGT"]' -p playeroneiss
+cleos push action playeroneiss create '[ "oneplayerone", "250000000.0000 CGT"]' -p playeroneiss
 
 cleos set account permission oneplayerone active '{"threshold": 1,"keys": [{"key": "EOS4wen3kfDXSHEb4nYmzDkcfvoPZb2jyoRS6mb6EbGJgM5Apu6Go","weight": 1}],"accounts": [{"permission":{"actor":"oneplayerone","permission":"eosio.code"},"weight":1}]}' owner -p oneplayerone
 

@@ -21,7 +21,7 @@ class playerone: public contract {
 public:
     const int64_t _B = 5ll;
     const int64_t _A = 100ll - _B * 2;
-    const int64_t _L = 1000000ll;
+    const int64_t _L = 2500000ll;
     const int64_t _D = _L / 4;
     const int64_t _INITIAL_PRICE = 100ll;
     const int64_t _MAX_SUPPLY_TIMES = 10ll;
@@ -177,7 +177,7 @@ public:
                         // 超出10ENU的部分将从预售额度里面扣除
                         asset quota = quantity;
                         quota -= asset(_MAX_IN_PRESALE, CORE_SYMBOL);
-                        enumivo_assert( user_itr->quota >= quota.amount, "预售额外份额不足，请单次购买 1 - 10 ENU");
+                        enumivo_assert( user_itr->quota * _UNIT >= quota.amount, "预售额外份额不足，请单次购买 1 - 10 ENU");
                         userinfo.modify(user_itr, from, [&](auto& u){
                             u.quota -= quota.amount / _UNIT;
                         });
