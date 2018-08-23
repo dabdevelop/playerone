@@ -106,10 +106,10 @@ public:
         if(quantity.symbol == CORE_SYMBOL){
             if(quantity.amount == 1ll){
                 if(memo.size() <= 0 || memo.size() > 12){
-                    // 用户通过向合约转账0.0001EOS取回推荐人奖金
+                    // 用户通过向合约转账0.0001ENU取回推荐人奖金
                     claim_fee(from);
                 } else {
-                    // 预售前可以通过发送邀请获得免费的预售额度。发送邀请的方式为：向合约转账0.0001EOS并且备注未注册的EOS账号，将成为他的推荐上级（需要消耗少量RAM），每个邀请增加1EOS预售额度(邀请码减少一个，邀请获得两个，总额度的增加一个)，单个账号不超过50EOS
+                    // 预售前可以通过发送邀请获得免费的预售额度。发送邀请的方式为：向合约转账0.0001ENU并且备注未注册的ENU账号，将成为他的推荐上级（需要消耗少量RAM），每个邀请增加1ENU预售额度(邀请码减少一个，邀请获得两个，总额度的增加一个)，单个账号不超过50ENU
                     string from_str = name_to_string(from);
                     account_name to_user = string_to_name(memo.c_str());
 
@@ -148,36 +148,36 @@ public:
                     }
                 }
             } else if(quantity.amount == 2ll){
-                // 头号通过向合约转账0.0002EOS获得头号奖金
-                // 奖励冷却时间是24小时，每次获得头号奖金池的10%，单次奖金得超过10EOS
+                // 头号通过向合约转账0.0002ENU获得头号奖金
+                // 奖励冷却时间是24小时，每次获得头号奖金池的10%，单次奖金得超过10ENU
                 // 如果头号位置更替，奖励冷却时间将重置
                 claim_reward(from);
             } else if(quantity.amount == 3ll){
-                // 头号通过向合约转账0.0003EOS解除抵押，将消耗抵押CGT的10%
+                // 头号通过向合约转账0.0003ENU解除抵押，将消耗抵押CGT的10%
                 unstake(from);
             } else if(memo == "deposit"){
-                // 通过向合约转账备注deposit存入EOS，用于购买邀请码，预售结束前获得等量预售额外额度，以及之后生态接入
-                // 存入的EOS将分红给所有流通CGT
+                // 通过向合约转账备注deposit存入ENU，用于购买邀请码，预售结束前获得等量预售额外额度，以及之后生态接入
+                // 存入的ENU将分红给所有流通CGT
                 // 购买邀请码将有机会获得新用户交易手续费的分红
                 deposit(from, quantity);
             } else if(memo == "reward"){
                 // 通过向合约转账备注reward存入头号奖励
-                // 存入的EOS将鼓励玩家竞选头号
+                // 存入的ENU将鼓励玩家竞选头号
                 deposit_reward(quantity);
             } else {
                 enumivo_assert( now() >= _GAME_INIT_TIME, "游戏还没有开始");
                 if( now() < _GAME_PRESALE_TIME ){
                     user_table userinfo(_self, from);
                     auto user_itr = userinfo.find(game_itr->gameid);
-                    // 预售结束前可以通过存入EOS获得等量的预售额度，存入的EOS对全部流通CGT分红，不可退回。相当于两倍的价格参与预售
+                    // 预售结束前可以通过存入ENU获得等量的预售额度，存入的ENU对全部流通CGT分红，不可退回。相当于两倍的价格参与预售
                     // 预售中每次买入会有平均30秒的冷却时间，连续两次买入间隔越短，下一次买入冷却时间越长，t = 225 / (dt + 1)，t为冷却时间，dt是冷却后等待的时间。预售结束之后冷却时间降为1秒。
                     if(user_itr == userinfo.end() || quantity.amount > user_itr->quota * _UNIT + _MAX_IN_PRESALE){
-                        enumivo_assert( quantity.amount >= _UNIT && quantity.amount <= _MAX_IN_PRESALE, "预售额外份额不足，请单次购买 1 - 10 EOS");
+                        enumivo_assert( quantity.amount >= _UNIT && quantity.amount <= _MAX_IN_PRESALE, "预售额外份额不足，请单次购买 1 - 10 ENU");
                     } else {
-                        // 超出10EOS的部分将从预售额度里面扣除
+                        // 超出10ENU的部分将从预售额度里面扣除
                         asset quota = quantity;
                         quota -= asset(_MAX_IN_PRESALE, CORE_SYMBOL);
-                        enumivo_assert( user_itr->quota >= quota.amount, "预售额外份额不足，请单次购买 1 - 10 EOS");
+                        enumivo_assert( user_itr->quota >= quota.amount, "预售额外份额不足，请单次购买 1 - 10 ENU");
                         userinfo.modify(user_itr, from, [&](auto& u){
                             u.quota -= quota.amount / _UNIT;
                         });
@@ -201,7 +201,7 @@ public:
     };
 
     void buy(account_name account, asset quantity, string memo){
-        enumivo_assert(quantity.amount >= _UNIT && quantity.amount <= 100 * _UNIT, "买入CGT区间为 1 - 100 EOS");
+        enumivo_assert(quantity.amount >= _UNIT && quantity.amount <= 100 * _UNIT, "买入CGT区间为 1 - 100 ENU");
 
         asset exchange_unit = asset(20 * _UNIT, CORE_SYMBOL);
         int64_t times = (quantity / exchange_unit) + 1;
@@ -388,7 +388,7 @@ public:
             enumivo_assert(token_price >= real_type(0.0), "invalid token price");
         }
 
-        enumivo_assert(transfer_eos <= asset(100 * _UNIT, CORE_SYMBOL) && transfer_eos >= asset(_UNIT, CORE_SYMBOL), "卖出CGT区间为 1 - 100 EOS");
+        enumivo_assert(transfer_eos <= asset(100 * _UNIT, CORE_SYMBOL) && transfer_eos >= asset(_UNIT, CORE_SYMBOL), "卖出CGT区间为 1 - 100 ENU");
         enumivo_assert(remain_asset >= asset(0, GAME_SYMBOL) && quantity >= remain_asset, "remain asset is invalid");
         enumivo_assert(quantity - remain_asset == token_balance - game_itr->balance, "exchange asset is not equal");
         enumivo_assert(game_itr->reserve >= transfer_eos, "insufficient reserve eos");
@@ -445,7 +445,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, quant_after_fee, string("卖出CGT获得EOS。 网址: http://eosplayer.one")))
+                make_tuple(_self, account, quant_after_fee, string("卖出CGT获得ENU。 网址: http://eosplayer.one")))
             .send();
         }
     }
@@ -461,7 +461,7 @@ public:
         real_type token_price = real_type(insure_balance.amount) / real_type(circulation.amount);
         asset transfer_eos = asset(token_price * real_type(quantity.amount), CORE_SYMBOL);
 
-        enumivo_assert(transfer_eos <= asset(100 * _UNIT, CORE_SYMBOL) && transfer_eos >= asset(_UNIT, CORE_SYMBOL), "销毁CGT的区间为 1 - 100 EOS");
+        enumivo_assert(transfer_eos <= asset(100 * _UNIT, CORE_SYMBOL) && transfer_eos >= asset(_UNIT, CORE_SYMBOL), "销毁CGT的区间为 1 - 100 ENU");
         enumivo_assert(insure_balance >= transfer_eos, "insufficient insure eos");
 
         user_table userinfo(_self, account);
@@ -502,7 +502,7 @@ public:
             action(
                 permission_level{_self, N(active)},
                 TOKEN_CONTRACT, N(transfer),
-                make_tuple(_self, account, quant_after_fee, string("销毁CGT获得EOS。 网址: http://eosplayer.one")))
+                make_tuple(_self, account, quant_after_fee, string("销毁CGT获得ENU。 网址: http://eosplayer.one")))
             .send();
         }
     }
@@ -646,7 +646,7 @@ public:
         auto game_itr = _game.begin();
         enumivo_assert(game_itr->player_one == account, "only player one can claim the reward");
         asset reward = game_itr->reward;
-        // 每一个奖励周期（24小时），头号都能够获得手续费奖池的10%，前提是发送金额大于10EOS
+        // 每一个奖励周期（24小时），头号都能够获得手续费奖池的10%，前提是发送金额大于10ENU
         reward.amount = reward.amount / 10;
         if( now() >= game_itr->reward_time && reward >= asset(10 * _UNIT, CORE_SYMBOL)){
             _game.modify(game_itr, 0, [&](auto& g){
@@ -768,7 +768,7 @@ public:
         user_table userinfo(_self, account);
         auto user_itr = userinfo.find(game_itr->gameid);
         if(user_itr == userinfo.end()) return;
-        //邀请奖励累积到1EOS以上才能够赎回
+        //邀请奖励累积到1ENU以上才能够赎回
         if(user_itr->reward > asset(_UNIT, CORE_SYMBOL)){
             asset reward = user_itr->reward;
             userinfo.modify(user_itr, account, [&](auto& u){
