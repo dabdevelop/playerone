@@ -180,7 +180,7 @@ public:
                     auto user_itr = userinfo.find(game_itr->gameid);
                     // 预售结束前可以通过存入EOS获得等量的预售额度，存入的EOS对全部流通CGT分红，不可退回。相当于两倍的价格参与预售
                     // 预售中每次买入会有平均30秒的冷却时间，连续两次买入间隔越短，下一次买入冷却时间越长，t = 225 / (dt + 1)，t为冷却时间，dt是冷却后等待的时间。预售结束之后冷却时间降为1秒。
-                    if(user_itr == userinfo.end() || quantity.amount > user_itr->quota * _UNIT + _MAX_IN_PRESALE || quantity.amount < _MAX_IN_PRESALE ){
+                    if(user_itr == userinfo.end() || quantity.amount > user_itr->quota * _UNIT + _MAX_IN_PRESALE || quantity.amount <= _MAX_IN_PRESALE ){
                         eosio_assert( quantity.amount >= _UNIT && quantity.amount <= _MAX_IN_PRESALE, "预售额外份额不足，请单次购买 1 - 10 EOS");
                     } else {
                         // 超出10EOS的部分将从预售额度里面扣除
