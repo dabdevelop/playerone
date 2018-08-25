@@ -772,8 +772,8 @@ public:
         user_table userinfo(_self, account);
         auto user_itr = userinfo.find(game_itr->gameid);
         if(user_itr == userinfo.end()) return;
-        //邀请奖励累积到1ENU以上才能够赎回
-        if(user_itr->reward > asset(_UNIT, CORE_SYMBOL)){
+        //邀请奖励累积到1ENU及以上才能够赎回
+        if(user_itr->reward >= asset(_UNIT, CORE_SYMBOL)){
             asset reward = user_itr->reward;
             userinfo.modify(user_itr, account, [&](auto& u){
                 u.reward = asset(0, CORE_SYMBOL);

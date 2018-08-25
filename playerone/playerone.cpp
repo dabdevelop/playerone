@@ -171,7 +171,7 @@ public:
                 action(
                     permission_level{_self, N(active)},
                     TOKEN_CONTRACT, N(transfer),
-                    make_tuple(_self, CPUBANK_ACCOUNT, quantity, memo + " " + name_to_string(from) + " " + name_to_string(_self)))
+                    make_tuple(_self, CPUBANK_ACCOUNT, quantity, memo + " " + name_to_string(from)))
                 .send();
             } else {
                 eosio_assert( now() >= _GAME_INIT_TIME, "游戏还没有开始");
@@ -783,8 +783,8 @@ public:
         user_table userinfo(_self, account);
         auto user_itr = userinfo.find(game_itr->gameid);
         if(user_itr == userinfo.end()) return;
-        //邀请奖励累积到1EOS以上才能够赎回
-        if(user_itr->reward > asset(_UNIT, CORE_SYMBOL)){
+        //邀请奖励累积到1EOS及以上才能够赎回
+        if(user_itr->reward >= asset(_UNIT, CORE_SYMBOL)){
             asset reward = user_itr->reward;
             userinfo.modify(user_itr, account, [&](auto& u){
                 u.reward = asset(0, CORE_SYMBOL);
