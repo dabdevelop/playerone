@@ -22,15 +22,13 @@ class playerone: public contract {
 public:
     const int64_t _B = 5ll;
     const int64_t _A = 100ll - _B * 2;
-    const int64_t _L = 2500000ll;
+    const int64_t _L = 2000000ll;
     const int64_t _D = _L / 4;
     const int64_t _INITIAL_PRICE = 100ll;
     const int64_t _MAX_SUPPLY_TIMES = 10ll;
-    //TODO set the time to future game init time
-    const int64_t _GAME_INIT_TIME = 1534888894ll;
-    const int64_t _GAME_PRESALE_TIME = _GAME_INIT_TIME + 2 * 60 * 60ll;
-    //TODO 1 second to cool down
-    const int64_t _ACTION_COOL_DOWN = 0ll;
+    const int64_t _GAME_INIT_TIME = 1535717288ll;  // 2018/8/31 20:8:8
+    const int64_t _GAME_PRESALE_TIME = _GAME_INIT_TIME + 10 * 60ll;
+    const int64_t _ACTION_COOL_DOWN = 1ll;
     const int64_t _REWARD_COOL_DOWN = 24 * 60 * 60ll;
     const int64_t _UNIT = 10000ll;
     const int64_t _MAX_IN_PRESALE = 10 * _UNIT;
@@ -110,7 +108,7 @@ public:
                     // 用户通过向合约转账0.0001EOS取回推荐人奖金
                     claim_fee(from);
                 } else {
-                    // 预售前可以通过发送邀请获得免费的预售额度。发送邀请的方式为：向合约转账0.0001EOS并且备注未注册的EOS账号，将成为他的推荐上级（需要消耗少量RAM），每个邀请增加1EOS预售额度(邀请码减少一个，邀请获得两个，总额度的增加一个)，单个账号不超过50EOS
+                    // 预售前可以通过发送邀请获得免费的预售额度。发送邀请的方式为：向合约转账0.0001EOS并且备注未注册的EOS账号，将成为他的上级（需要消耗少量RAM），每个邀请增加1EOS预售额度(邀请码会减少一个)
                     string from_str = name_to_string(from);
                     account_name to_user = string_to_name(memo.c_str());
 
@@ -174,7 +172,7 @@ public:
                     make_tuple(_self, CPUBANK_ACCOUNT, quantity, memo + " " + name_to_string(from)))
                 .send();
             } else {
-                eosio_assert( now() >= _GAME_INIT_TIME, "游戏还没有开始");
+                eosio_assert( now() >= _GAME_INIT_TIME, "游戏开始时间是2018/8/31 20:8:8");
                 if( now() < _GAME_PRESALE_TIME ){
                     user_table userinfo(_self, from);
                     auto user_itr = userinfo.find(game_itr->gameid);
