@@ -1,4 +1,4 @@
-![](https://ws2.sinaimg.cn/large/006tNbRwgy1fuhfsrjqs4j3043018dfu.jpg)
+![](https://raw.githubusercontent.com/dabdevelop/playerone/master/img/logo1.jpg)
 
 # 头号玩家项目介绍
 
