@@ -1,4 +1,4 @@
-![](https://raw.githubusercontent.com/dabdevelop/playerone/master/img/logo1.jpg)
+![](https://raw.githubusercontent.com/dabdevelop/playerone/master/img/logo2.jpg)
 
 # 头号玩家项目介绍
 
