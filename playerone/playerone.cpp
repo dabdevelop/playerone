@@ -22,7 +22,7 @@ class playerone: public contract {
 public:
     const int64_t _B = 5ll;
     const int64_t _A = 100ll - _B * 2;
-    const int64_t _L = 2000000ll;
+    const int64_t _L = 2500000ll;
     const int64_t _D = _L / 4;
     const int64_t _INITIAL_PRICE = 100ll;
     const int64_t _MAX_SUPPLY_TIMES = 10ll;
@@ -111,19 +111,17 @@ public:
                     // 预售前可以通过发送邀请获得免费的预售额度。发送邀请的方式为：向合约转账0.0001EOS并且备注未注册的EOS账号，将成为他的上级（需要消耗少量RAM），每个邀请增加1EOS预售额度(邀请码会减少一个)
                     string from_str = name_to_string(from);
                     account_name to_user = string_to_name(memo.c_str());
-
-                    action(
-                        permission_level{_self, N(active)},
-                        TOKEN_CONTRACT, N(transfer),
-                        make_tuple(_self, to_user, quantity, from_str + "邀请您参与头号玩家，通过邀请码注册有机会减少一半的手续费。网址: http://eosplayer.one/#/?ref=" + from_str))
-                    .send();
-
                     auto invitation_itr = invitations.find(to_user);
                     user_table to_userinfo(_self, to_user);
                     auto to_user_itr = to_userinfo.find(game_itr->gameid);
                     user_table from_userinfo(_self, from);
                     auto from_user_itr = from_userinfo.find(game_itr->gameid);
                     if(from_user_itr != from_userinfo.end() && invitation_itr == invitations.end() && to_user_itr == to_userinfo.end()){
+                        action(
+                            permission_level{_self, N(active)},
+                            TOKEN_CONTRACT, N(transfer),
+                            make_tuple(_self, to_user, quantity, from_str + "邀请您参与头号玩家，通过邀请码注册有机会减少一半的手续费。网址: http://eosplayer.one/#/?ref=" + from_str))
+                        .send();
                         invitation_itr = invitations.emplace(from, [&](auto& i){
                             i.to = to_user;
                             i.from = from;
