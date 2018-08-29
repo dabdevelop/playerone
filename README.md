@@ -13,7 +13,14 @@
 * 邮件:  [support@dab.vc](support@dab.vc)
 
 通过团队协商，头号玩家决定采用多签的方式保留更新合约的权力。
-多签的持有人包括：知名的开发者和社群群主。
+多签的持有人包括：知名开发者和社群群主。
+
+* ITE开发者账号: **itedeveloper@acive**
+* 岛娘: **minakokojima@active**
+* TP钱包: **itokenpocket@active**
+* 社区群主只言片语: **wanshijian55@active**
+* PlayerOne开发者账号: **playeronefee@active**
+
 
 合约源码经过长时间开源，并且邀请了众多知名开发者进行安全审计，安全性可靠性高。
 
