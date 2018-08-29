@@ -218,7 +218,7 @@ public:
         user_table userinfo(_self, account);
         auto user_itr = userinfo.find(game_itr->gameid);
         if(user_itr == userinfo.end()){
-            new_user(account, memo, account);
+            new_user(account, memo, _self);
             user_itr = userinfo.find(game_itr->gameid);
         } else {
             uint64_t now_action = now();
@@ -401,7 +401,7 @@ public:
         user_table userinfo(_self, account);
         auto user_itr = userinfo.find(game_itr->gameid);
         if(user_itr == userinfo.end()){
-            new_user(account, memo, account);
+            new_user(account, memo, _self);
             user_itr = userinfo.find(game_itr->gameid);
         } else {
             eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "操作太频繁，需要时间冷却");
@@ -472,7 +472,7 @@ public:
         user_table userinfo(_self, account);
         auto user_itr = userinfo.find(game_itr->gameid);
         if(user_itr == userinfo.end()){
-            new_user(account, string(""), account);
+            new_user(account, string(""), _self);
             user_itr = userinfo.find(game_itr->gameid);
         } else {
             eosio_assert( now() >= user_itr->last_action + _ACTION_COOL_DOWN, "操作太频繁，需要时间冷却");
@@ -520,7 +520,7 @@ public:
         auto fee_user_itr = fee_userinfo.find(game_itr->gameid);
         if(quantity.amount >= _REFER_PRICE / 2){
             if(user_itr == userinfo.end()){
-                new_user(account, string(""), account);
+                new_user(account, string(""), _self);
                 user_itr = userinfo.find(game_itr->gameid);
             }
             if(quantity.amount >= _REFER_PRICE){
