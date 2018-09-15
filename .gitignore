@@ -1,5 +1,7 @@
 *.key
 
+*.secure.sh
+
 # Logs
 logs
 *.log
